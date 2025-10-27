@@ -1,10 +1,11 @@
-package com.Steffaanus.native_geofence.util
+package com.steffaanus.native_geofence.util
 
 import android.content.Context
 import android.util.Log
-import com.Steffaanus.native_geofence.Constants
-import com.Steffaanus.native_geofence.generated.GeofenceWire
-import com.Steffaanus.native_geofence.model.GeofenceStorage
+import com.steffaanus.native_geofence.Constants
+import com.steffaanus.native_geofence.generated.GeofenceWire
+import com.steffaanus.native_geofence.model.GeofenceStorage
+import com.steffaanus.native_geofence.model.LegacyGeofenceStorage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 
@@ -78,7 +79,7 @@ class NativeGeofencePersistence {
             } catch (e: Exception) {
                 // This might be an old geofence format. Try to migrate.
                 try {
-                    val legacyGeofence = Json.decodeFromString<LegacyGeofenceStorage>(jsonData)
+                    val legacyGeofence = Json.decodeFromString<LegacyGeofenceStorage>(jsonData.toString())
                     val newGeofence = legacyGeofence.toGeofenceStorage()
                     // Save it in the new format for next time.
                     saveOrUpdateGeofence(context, newGeofence)

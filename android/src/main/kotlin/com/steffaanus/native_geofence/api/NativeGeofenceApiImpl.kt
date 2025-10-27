@@ -1,4 +1,4 @@
-package com.Steffaanus.native_geofence.api
+package com.steffaanus.native_geofence.api
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -9,6 +9,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.steffaanus.native_geofence.model.GeofenceStatus
+import com.steffaanus.native_geofence.model.GeofenceStorage
 import com.Steffaanus.native_geofence.Constants
 import com.Steffaanus.native_geofence.generated.ActiveGeofenceWire
 import com.Steffaanus.native_geofence.generated.FlutterError
@@ -47,13 +49,17 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         createGeofenceHelper(geofence, true, callback)
     }
 
-    override fun syncGeofences() {
+    fun syncGeofences() {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         for (geofence in geofences) {
             // Re-create ACTIVE geofences and re-try PENDING/FAILED ones.
             createGeofenceHelper(geofence.toWire(), false, null)
         }
         Log.d(TAG, "${geofences.size} geofences synced.")
+    }
+
+    override fun reCreateAfterReboot() {
+        syncGeofences()
     }
 
     override fun getGeofenceIds(): List<String> {
