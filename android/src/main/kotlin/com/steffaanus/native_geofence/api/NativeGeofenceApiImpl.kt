@@ -11,9 +11,9 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.steffaanus.native_geofence.model.GeofenceStatus
 import com.steffaanus.native_geofence.model.GeofenceStorage
-import com.Steffaanus.native_geofence.Constants
-import com.Steffaanus.native_geofence.generated.ActiveGeofenceWire
-import com.Steffaanus.native_geofence.generated.FlutterError
+import com.steffaanus.native_geofence.Constants
+import com.steffaanus.native_geofence.generated.ActiveGeofenceWire
+import com.steffaanus.native_geofence.generated.FlutterError
 import com.Steffaanus.native_geofence.generated.GeofenceWire
 import com.Steffaanus.native_geofence.generated.NativeGeofenceApi
 import com.Steffaanus.native_geofence.generated.NativeGeofenceErrorCode
@@ -49,13 +49,17 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         createGeofenceHelper(geofence, true, callback)
     }
 
-    fun syncGeofences() {
+    override fun syncGeofences() {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         for (geofence in geofences) {
             // Re-create ACTIVE geofences and re-try PENDING/FAILED ones.
             createGeofenceHelper(geofence.toWire(), false, null)
         }
         Log.d(TAG, "${geofences.size} geofences synced.")
+    }
+
+    override fun reCreateAfterReboot() {
+        syncGeofences()
     }
 
     override fun getGeofenceIds(): List<String> {
@@ -145,13 +149,13 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     ) {
         val geofenceStorage = if(isNew) {
             // If it's a new geofence, store it with PENDING status first.
-            val storage = GeofenceStorage.fromWire(geofenceWire)
+            val storage = GeofenceWires.toGeofenceStorage(geofenceWire)
             storage.status = GeofenceStatus.PENDING
             NativeGeofencePersistence.saveOrUpdateGeofence(context, storage)
             storage
         } else {
             // This is a re-creation (e.g. after reboot), the storage entry already exists.
-            GeofenceStorage.fromWire(geofenceWire)
+            GeofenceWires.toGeofenceStorage(geofenceWire)
         }
 
         // We try to create the Geofence without checking for permissions.

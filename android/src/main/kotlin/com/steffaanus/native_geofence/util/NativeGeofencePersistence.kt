@@ -24,7 +24,7 @@ class NativeGeofencePersistence {
 
         @JvmStatic
         fun saveGeofence(context: Context, geofence: GeofenceWire) {
-            saveOrUpdateGeofence(context, GeofenceStorage.fromWire(geofence))
+            saveOrUpdateGeofence(context, GeofenceWires.toGeofenceStorage(geofence))
         }
 
         fun saveOrUpdateGeofence(context: Context, geofence: GeofenceStorage) {
@@ -79,8 +79,8 @@ class NativeGeofencePersistence {
             } catch (e: Exception) {
                 // This might be an old geofence format. Try to migrate.
                 try {
-                    val legacyGeofence = Json.decodeFromString<LegacyGeofenceStorage>(jsonData.toString())
-                    val newGeofence = legacyGeofence.toGeofenceStorage()
+                    val legacyGeofence = Json.decodeFromString<LegacyGeofenceStorage>(jsonData)
+                    val newGeofence = GeofenceWires.toGeofenceStorage(legacyGeofence)
                     // Save it in the new format for next time.
                     saveOrUpdateGeofence(context, newGeofence)
                     Log.i(TAG,"Successfully migrated geofence ${id} from legacy format.")
