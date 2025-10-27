@@ -37,6 +37,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
             .putLong(Constants.CALLBACK_DISPATCHER_HANDLE_KEY, callbackDispatcherHandle)
             .apply()
         Log.d(TAG, "Initialized NativeGeofenceApi.")
+        syncGeofences()
     }
 
     override fun createGeofence(
@@ -46,12 +47,13 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         createGeofenceHelper(geofence, true, callback)
     }
 
-    override fun reCreateAfterReboot() {
+    override fun syncGeofences() {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         for (geofence in geofences) {
-            createGeofenceHelper(geofence, false, null)
+            // Re-create ACTIVE geofences and re-try PENDING/FAILED ones.
+            createGeofenceHelper(geofence.toWire(), false, null)
         }
-        Log.d(TAG, "${geofences.size} geofences re-created.")
+        Log.d(TAG, "${geofences.size} geofences synced.")
     }
 
     override fun getGeofenceIds(): List<String> {
@@ -60,7 +62,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
 
     override fun getGeofences(): List<ActiveGeofenceWire> {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
-        return geofences.map { ActiveGeofenceWires.fromGeofenceWire(it) }.toList()
+        return geofences.map { ActiveGeofenceWires.fromGeofenceWire(it.toWire()) }.toList()
     }
 
     override fun removeGeofenceById(id: String, callback: (Result<Unit>) -> Unit) {
@@ -135,28 +137,46 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
 
     @SuppressLint("MissingPermission")
     private fun createGeofenceHelper(
-        geofence: GeofenceWire,
-        cache: Boolean,
+        geofenceWire: GeofenceWire,
+        isNew: Boolean,
         callback: ((Result<Unit>) -> Unit)?
     ) {
+        val geofenceStorage = if(isNew) {
+            // If it's a new geofence, store it with PENDING status first.
+            val storage = GeofenceStorage.fromWire(geofenceWire)
+            storage.status = GeofenceStatus.PENDING
+            NativeGeofencePersistence.saveOrUpdateGeofence(context, storage)
+            storage
+        } else {
+            // This is a re-creation (e.g. after reboot), the storage entry already exists.
+            GeofenceStorage.fromWire(geofenceWire)
+        }
+
         // We try to create the Geofence without checking for permissions.
         // Only if creation fails we will alert the Flutter plugin of the permission issue.
         geofencingClient.addGeofences(
             GeofencingRequest.Builder().apply {
-                setInitialTrigger(GeofenceEvents.createMask(geofence.androidSettings.initialTriggers))
-                addGeofence(GeofenceWires.toGeofence(geofence))
+                setInitialTrigger(GeofenceEvents.createMask(geofenceWire.androidSettings.initialTriggers))
+                addGeofence(GeofenceWires.toGeofence(geofenceWire))
             }.build(),
-            getGeofencePendingIndent(context, geofence.callbackHandle)
+            getGeofencePendingIndent(context, geofenceWire.callbackHandle)
         ).run {
             addOnSuccessListener {
-                if (cache) {
-                    NativeGeofencePersistence.saveGeofence(context, geofence)
+                 if (isNew) {
+                    // Update status to ACTIVE
+                    geofenceStorage.status = GeofenceStatus.ACTIVE
+                    NativeGeofencePersistence.saveOrUpdateGeofence(context, geofenceStorage)
                 }
-                Log.d(TAG, "Successfully added Geofence ID=${geofence.id}.")
+                Log.d(TAG, "Successfully added Geofence ID=${geofenceWire.id}.")
                 callback?.invoke(Result.success(Unit))
             }
             addOnFailureListener {
-                Log.e(TAG, "Failed to add Geofence ID=${geofence.id}: $it")
+                Log.e(TAG, "Failed to add Geofence ID=${geofenceWire.id}: $it")
+
+                if (isNew) {
+                    geofenceStorage.status = GeofenceStatus.FAILED
+                    NativeGeofencePersistence.saveOrUpdateGeofence(context, geofenceStorage)
+                }
 
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {

@@ -6,13 +6,14 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 class GeofenceStorage(
-    private val id: String,
-    private val location: LocationStorage,
-    private val radiusMeters: Double,
-    private val triggers: List<GeofenceEvent>,
-    private val iosSettings: IosGeofenceSettingsStorage,
-    private val androidSettings: AndroidGeofenceSettingsStorage,
-    private val callbackHandle: Long
+    val id: String,
+    val location: LocationStorage,
+    val radiusMeters: Double,
+    val triggers: List<GeofenceEvent>,
+    val iosSettings: IosGeofenceSettingsStorage,
+    val androidSettings: AndroidGeofenceSettingsStorage,
+    val callbackHandle: Long,
+    var status: GeofenceStatus = GeofenceStatus.PENDING,
 ) {
     companion object {
         fun fromWire(e: GeofenceWire): GeofenceStorage {
@@ -23,7 +24,8 @@ class GeofenceStorage(
                 e.triggers,
                 IosGeofenceSettingsStorage.fromWire(e.iosSettings),
                 AndroidGeofenceSettingsStorage.fromWire(e.androidSettings),
-                e.callbackHandle
+                e.callbackHandle,
+                GeofenceStatus.PENDING,
             )
         }
     }

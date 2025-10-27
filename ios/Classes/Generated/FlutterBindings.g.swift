@@ -136,7 +136,7 @@ func deepHashFlutterBindings(value: Any?, hasher: inout Hasher) {
 ///
 /// See the helpful illustration at:
 /// https://developer.android.com/develop/sensors-and-location/location/geofencing
-enum GeofenceEvent: Int {
+enum GeofenceEvent: Int, Codable {
   case enter = 0
   case exit = 1
   /// Not supported on iOS.
@@ -182,7 +182,7 @@ enum NativeGeofenceErrorCode: Int {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct LocationWire: Hashable {
+struct LocationWire: Hashable, Codable {
   var latitude: Double
   var longitude: Double
 
@@ -211,7 +211,7 @@ struct LocationWire: Hashable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct IosGeofenceSettingsWire: Hashable {
+struct IosGeofenceSettingsWire: Hashable, Codable {
   var initialTrigger: Bool
 
 
@@ -236,7 +236,7 @@ struct IosGeofenceSettingsWire: Hashable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct AndroidGeofenceSettingsWire: Hashable {
+struct AndroidGeofenceSettingsWire: Hashable, Codable {
   var initialTriggers: [GeofenceEvent]
   var expirationDurationMillis: Int64? = nil
   var loiteringDelayMillis: Int64
@@ -273,7 +273,7 @@ struct AndroidGeofenceSettingsWire: Hashable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct GeofenceWire: Hashable {
+struct GeofenceWire: Hashable, Codable {
   var id: String
   var location: LocationWire
   var radiusMeters: Double

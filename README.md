@@ -170,6 +170,8 @@ await NativeGeofenceManager.instance.initialize();
 
 This plugin does not deal with obtaining permissions from the user. Please use a 3rd party plugin, such as [permission_handler](https://pub.dev/packages/permission_handler) for that.
 
+**Warning:** The correct functioning of this plugin is critically dependent on `permission_handler`. Ensure you follow its installation instructions carefully and monitor its releases for any breaking changes.
+
 As noted in the setup section you will need to obtain the following permissions:
 
 * `Permission.location`

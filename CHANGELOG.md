@@ -1,3 +1,12 @@
+## 2.0.0
+
+*   **Feat (iOS & Android):** Implemented a seamless data migration for the internal storage format. Existing geofences on both platforms will be automatically migrated to the new, more robust storage structure. No breaking changes for existing users.
+*   **Feat (iOS):** The `reCreateAfterReboot()` method has been deprecated in favor of an automatic `syncGeofences()` that runs on initialization. Manual calls to `reCreateAfterReboot()` can be safely removed.
+*   **Feat:** Implemented a new `syncGeofences()` method on both Android and iOS that runs on every app start, ensuring the plugin's internal state is consistent with the OS. This significantly improves reliability.
+*   **Fix (Android):** Implemented a seamless data migration for the internal storage format. Existing geofences will be automatically migrated to the new, more robust storage structure.
+*   **Fix (Android & iOS):** Fundamentally refactored the state management to prevent state desynchronization, which was the likely cause of geofence events no longer being triggered over time.
+*   **Fix (iOS):** Replaced the inefficient and error-prone background `FlutterEngine` management with a single, reusable engine. This resolves race conditions and significantly improves performance and battery efficiency.
+
 ## 1.1.0
 
 * Upgrade pub.dev dependencies

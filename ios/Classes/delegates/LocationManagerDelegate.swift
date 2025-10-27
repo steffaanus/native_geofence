@@ -12,9 +12,6 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     private let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
     let locationManager: CLLocationManager
     
-    private var headlessFlutterEngine: FlutterEngine? = nil
-    private var nativeGeofenceBackgroundApi: NativeGeofenceBackgroundApiImpl? = nil
-    
     init(flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?) {
         self.flutterPluginRegistrantCallback = flutterPluginRegistrantCallback
         locationManager = LocationManagerDelegate.sharedLocationManager ?? CLLocationManager()
@@ -43,66 +40,49 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
             return
         }
         
-        guard let callbackHandle = NativeGeofencePersistence.getRegionCallbackHandle(id: activeGeofence.id) else {
-            log.error("Callback handle for region \(activeGeofence.id) not found.")
+        guard let geofence = NativeGeofencePersistence.getGeofence(id: activeGeofence.id) else {
+            log.error("Geofence definition for region \(activeGeofence.id) not found in persistence.")
             return
         }
+
+        let params = GeofenceCallbackParamsWire(geofences: [activeGeofence], event: event, location: nil, callbackHandle: geofence.callbackHandle)
         
-        let params = GeofenceCallbackParamsWire(geofences: [activeGeofence], event: event, callbackHandle: callbackHandle)
-        
-        guard let backgroundApi = nativeGeofenceBackgroundApi ?? createFlutterEngine() else {
+        // If the engine is not running, start it and then send the event.
+        // This handles cases where the app was terminated and restarted by the system.
+        if EngineManager.shared.getBackgroundApi() == nil {
+            log.warning("Background API not available. The engine may have been killed. Attempting to restart...")
+            guard let registrant = flutterPluginRegistrantCallback else {
+                log.error("Flutter plugin registrant callback is not available. Cannot restart engine.")
+                return
+            }
+            // Start the engine and pass a completion handler to send the event once it's ready.
+            EngineManager.shared.startEngine(withPluginRegistrant: registrant) {
+                self.sendGeofenceEvent(params: params, activeGeofence: activeGeofence)
+            }
+        } else {
+            // Engine is already running, send the event directly.
+            sendGeofenceEvent(params: params, activeGeofence: activeGeofence)
+        }
+    }
+    
+    private func sendGeofenceEvent(params: GeofenceCallbackParamsWire, activeGeofence: ActiveGeofenceWire) {
+        guard let backgroundApi = EngineManager.shared.getBackgroundApi() else {
+            log.error("Failed to get background API even after engine start. Aborting.")
             return
         }
-        
-        // Shutdown the engine once the Geofence event is handled
-        func cleanup() {
-            nativeGeofenceBackgroundApi = nil
-            headlessFlutterEngine?.destroyContext()
-            headlessFlutterEngine = nil
-            log.debug("Flutter engine cleanup complete.")
+
+        backgroundApi.geofenceTriggered(params: params) { result in
+            switch result {
+            case .success:
+                self.log.debug("Geofence trigger for \(activeGeofence.id) handled successfully.")
+            case .failure(let error):
+                self.log.error("Geofence trigger for \(activeGeofence.id) failed: \(error.localizedDescription)")
+            }
         }
-        
-        nativeGeofenceBackgroundApi!.geofenceTriggered(params: params, cleanup: cleanup)
-        log.debug("Geofence trigger event sent.")
+        log.debug("Geofence trigger event sent for \(activeGeofence.id).")
     }
     
     func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: any Error) {
         log.error("monitoringDidFailFor: \(region?.identifier ?? "nil") withError: \(error)")
-    }
-    
-    private func createFlutterEngine() -> NativeGeofenceBackgroundApiImpl? {
-        // Create a Flutter engine
-        headlessFlutterEngine = FlutterEngine(name: Constants.HEADLESS_FLUTTER_ENGINE_NAME, project: nil, allowHeadlessExecution: true)
-        log.debug("A new headless Flutter engine has been created.")
-        
-        guard let callbackDispatcherHandle = NativeGeofencePersistence.getCallbackDispatcherHandle() else {
-            log.error("Callback dispatcher not found in UserDefaults.")
-            return nil
-        }
-        
-        guard let callbackDispatcherInfo = FlutterCallbackCache.lookupCallbackInformation(callbackDispatcherHandle) else {
-            log.error("Callback dispatcher not found.")
-            return nil
-        }
-        
-        // Start the engine at the specified callback method.
-        headlessFlutterEngine!.run(withEntrypoint: callbackDispatcherInfo.callbackName, libraryURI: callbackDispatcherInfo.callbackLibraryPath)
-        // Once our headless runner has been started, we need to register the application's plugins
-        // with the runner in order for them to work on the background isolate.
-        // `flutterPluginRegistrantCallback` is a callback set from AppDelegate in the main application.
-        // This callback should register all relevant plugins (excluding those which require UI).
-        flutterPluginRegistrantCallback?(headlessFlutterEngine!)
-        log.debug("Flutter engine started and plugins registered.")
-        
-        nativeGeofenceBackgroundApi = NativeGeofenceBackgroundApiImpl(binaryMessenger: headlessFlutterEngine!.binaryMessenger)
-        NativeGeofenceBackgroundApiSetup.setUp(binaryMessenger: headlessFlutterEngine!.binaryMessenger, api: nativeGeofenceBackgroundApi)
-        log.debug("NativeGeofenceBackgroundApi initialized.")
-
-        // Also register the main NativeGeofenceApi in background context
-        let nativeGeofenceMainApi = NativeGeofenceApiImpl(registerPlugins: flutterPluginRegistrantCallback!)
-        NativeGeofenceApiSetup.setUp(binaryMessenger: headlessFlutterEngine!.binaryMessenger, api: nativeGeofenceMainApi)
-        log.debug("NativeGeofenceMainApi also initialized in background context.")
-
-        return nativeGeofenceBackgroundApi
     }
 }

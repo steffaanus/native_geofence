@@ -10,17 +10,18 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
     private var eventQueue: [GeofenceCallbackParamsWire] = .init()
     private var isClosed: Bool = false
     private var nativeGeoFenceTriggerApi: NativeGeofenceTriggerApi? = nil
-    private var cleanup: (() -> Void)? = nil
+    
+    // Callback to notify when the background API is ready to process events.
+    var onInitialized: (() -> Void)?
     
     init(binaryMessenger: FlutterBinaryMessenger) {
         self.binaryMessenger = binaryMessenger
     }
     
-    func geofenceTriggered(params: GeofenceCallbackParamsWire, cleanup: @escaping () -> Void) {
+    func geofenceTriggered(params: GeofenceCallbackParamsWire, completion: @escaping (Result<Void, Error>) -> Void) {
         objc_sync_enter(self)
         
         eventQueue.append(params)
-        self.cleanup = cleanup
         
         objc_sync_exit(self)
         
@@ -37,6 +38,8 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         if (nativeGeoFenceTriggerApi == nil) {
             nativeGeoFenceTriggerApi = NativeGeofenceTriggerApi(binaryMessenger: binaryMessenger)
             log.debug("NativeGeofenceTriggerApi setup complete.")
+            // Notify listeners that the API is now initialized.
+            onInitialized?()
         }
         
         objc_sync_exit(self)
@@ -73,8 +76,10 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         }
         
         // Now that the event queue is empty we can cleanup and de-allocate this class.
-        cleanup?()
-        isClosed = true
+        // The engine is now managed centrally, so we no longer call cleanup from here.
+        if eventQueue.isEmpty {
+             log.debug("Event queue is empty.")
+        }
     }
     
     private func callGeofenceTriggerApi(params: GeofenceCallbackParamsWire) {
