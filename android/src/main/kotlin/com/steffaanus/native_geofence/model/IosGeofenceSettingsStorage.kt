@@ -1,6 +1,6 @@
-package com.Steffaanus.native_geofence.model
+package com.steffaanus.native_geofence.model
 
-import com.Steffaanus.native_geofence.generated.IosGeofenceSettingsWire
+import com.steffaanus.native_geofence.generated.IosGeofenceSettingsWire
 import kotlinx.serialization.Serializable
 
 @Serializable

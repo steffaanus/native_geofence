@@ -1,9 +1,9 @@
-package com.Steffaanus.native_geofence.util
+package com.steffaanus.native_geofence.util
 
-import com.Steffaanus.native_geofence.generated.ActiveGeofenceWire
-import com.Steffaanus.native_geofence.generated.AndroidGeofenceSettingsWire
-import com.Steffaanus.native_geofence.generated.GeofenceWire
-import com.Steffaanus.native_geofence.generated.LocationWire
+import com.steffaanus.native_geofence.generated.ActiveGeofenceWire
+import com.steffaanus.native_geofence.generated.AndroidGeofenceSettingsWire
+import com.steffaanus.native_geofence.generated.GeofenceWire
+import com.steffaanus.native_geofence.generated.LocationWire
 import com.google.android.gms.location.Geofence
 
 class ActiveGeofenceWires {

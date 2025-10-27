@@ -4,6 +4,9 @@ import com.steffaanus.native_geofence.generated.GeofenceWire
 import com.steffaanus.native_geofence.model.GeofenceStatus
 import com.steffaanus.native_geofence.model.GeofenceStorage
 import com.steffaanus.native_geofence.model.LegacyGeofenceStorage
+import com.steffaanus.native_geofence.model.LocationStorage
+import com.steffaanus.native_geofence.model.IosGeofenceSettingsStorage
+import com.steffaanus.native_geofence.model.AndroidGeofenceSettingsStorage
 import com.google.android.gms.location.Geofence
 
 class GeofenceWires {
@@ -11,24 +14,26 @@ class GeofenceWires {
         fun toGeofenceStorage(e: GeofenceWire): GeofenceStorage {
             return GeofenceStorage(
                 id = e.id,
-                status = GeofenceStatus.UNKNOWN,
+                status = GeofenceStatus.PENDING,
                 callbackHandle = e.callbackHandle,
-                location = LocationWires.toStorage(e.location),
+                location = LocationStorage.fromWire(e.location),
                 radiusMeters = e.radiusMeters,
                 triggers = e.triggers,
-                androidSettings = AndroidGeofenceSettingsWires.toStorage(e.androidSettings),
+                iosSettings = IosGeofenceSettingsStorage.fromWire(e.iosSettings),
+                androidSettings = AndroidGeofenceSettingsStorage.fromWire(e.androidSettings),
             )
         }
         
         fun toGeofenceStorage(e: LegacyGeofenceStorage): GeofenceStorage {
             return GeofenceStorage(
                 id = e.id,
-                status = GeofenceStatus.UNKNOWN,
+                status = GeofenceStatus.PENDING,
                 callbackHandle = e.callbackHandle,
-                location = e.location.toLocationStorage(),
-                radiusMeters = e.radius,
-                triggers = e.trigger,
-                androidSettings = AndroidGeofenceSettingsWires.toStorage(e.androidSettings),
+                location = e.location,
+                radiusMeters = e.radiusMeters,
+                triggers = e.triggers,
+                iosSettings = e.iosSettings,
+                androidSettings = e.androidSettings,
             )
         }
 

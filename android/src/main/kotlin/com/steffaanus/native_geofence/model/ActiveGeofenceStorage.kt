@@ -1,7 +1,7 @@
-package com.Steffaanus.native_geofence.model
+package com.steffaanus.native_geofence.model
 
-import com.Steffaanus.native_geofence.generated.ActiveGeofenceWire
-import com.Steffaanus.native_geofence.generated.GeofenceEvent
+import com.steffaanus.native_geofence.generated.ActiveGeofenceWire
+import com.steffaanus.native_geofence.generated.GeofenceEvent
 import kotlinx.serialization.Serializable
 
 @Serializable

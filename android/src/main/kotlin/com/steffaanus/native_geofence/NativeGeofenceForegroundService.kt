@@ -1,4 +1,4 @@
-package com.Steffaanus.native_geofence
+package com.steffaanus.native_geofence
 
 import android.app.Service
 import android.content.Context
@@ -6,7 +6,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
-import com.Steffaanus.native_geofence.util.Notifications
+import com.steffaanus.native_geofence.util.Notifications
 import kotlin.time.Duration.Companion.minutes
 
 // TODO: Allow customizing notification details.

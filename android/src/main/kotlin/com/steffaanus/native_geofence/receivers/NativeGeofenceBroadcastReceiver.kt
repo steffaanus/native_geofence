@@ -1,4 +1,4 @@
-package com.Steffaanus.native_geofence.receivers
+package com.steffaanus.native_geofence.receivers
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -9,13 +9,13 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
-import com.Steffaanus.native_geofence.Constants
-import com.Steffaanus.native_geofence.NativeGeofenceBackgroundWorker
-import com.Steffaanus.native_geofence.generated.GeofenceCallbackParamsWire
-import com.Steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
-import com.Steffaanus.native_geofence.util.ActiveGeofenceWires
-import com.Steffaanus.native_geofence.util.GeofenceEvents
-import com.Steffaanus.native_geofence.util.LocationWires
+import com.steffaanus.native_geofence.Constants
+import com.steffaanus.native_geofence.NativeGeofenceBackgroundWorker
+import com.steffaanus.native_geofence.generated.GeofenceCallbackParamsWire
+import com.steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
+import com.steffaanus.native_geofence.util.ActiveGeofenceWires
+import com.steffaanus.native_geofence.util.GeofenceEvents
+import com.steffaanus.native_geofence.util.LocationWires
 import com.google.android.gms.location.GeofencingEvent
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

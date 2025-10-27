@@ -107,7 +107,7 @@ class NativeGeofencePersistence {
 
                 val result = mutableListOf<GeofenceStorage>()
                 for (id in persistentGeofences) {
-                    getGeofence(context, id)?.let { result.add(it) }
+                    getGeofence(context, id)?.let { it: GeofenceStorage -> result.add(it) }
                 }
                 Log.d(TAG, "Retrieved ${result.size} Geofences from storage.")
                 return result

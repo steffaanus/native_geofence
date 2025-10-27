@@ -1,7 +1,7 @@
-package com.Steffaanus.native_geofence.util
+package com.steffaanus.native_geofence.util
 
 import android.location.Location
-import com.Steffaanus.native_geofence.generated.LocationWire
+import com.steffaanus.native_geofence.generated.LocationWire
 
 class LocationWires {
     companion object {

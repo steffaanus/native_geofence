@@ -14,14 +14,14 @@ import com.steffaanus.native_geofence.model.GeofenceStorage
 import com.steffaanus.native_geofence.Constants
 import com.steffaanus.native_geofence.generated.ActiveGeofenceWire
 import com.steffaanus.native_geofence.generated.FlutterError
-import com.Steffaanus.native_geofence.generated.GeofenceWire
-import com.Steffaanus.native_geofence.generated.NativeGeofenceApi
-import com.Steffaanus.native_geofence.generated.NativeGeofenceErrorCode
-import com.Steffaanus.native_geofence.util.GeofenceEvents
-import com.Steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver
-import com.Steffaanus.native_geofence.util.ActiveGeofenceWires
-import com.Steffaanus.native_geofence.util.GeofenceWires
-import com.Steffaanus.native_geofence.util.NativeGeofencePersistence
+import com.steffaanus.native_geofence.generated.GeofenceWire
+import com.steffaanus.native_geofence.generated.NativeGeofenceApi
+import com.steffaanus.native_geofence.generated.NativeGeofenceErrorCode
+import com.steffaanus.native_geofence.util.GeofenceEvents
+import com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver
+import com.steffaanus.native_geofence.util.ActiveGeofenceWires
+import com.steffaanus.native_geofence.util.GeofenceWires
+import com.steffaanus.native_geofence.util.NativeGeofencePersistence
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
 
@@ -49,7 +49,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         createGeofenceHelper(geofence, true, callback)
     }
 
-    override fun syncGeofences() {
+    internal fun syncGeofences() {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         for (geofence in geofences) {
             // Re-create ACTIVE geofences and re-try PENDING/FAILED ones.

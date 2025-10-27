@@ -1,7 +1,9 @@
-package com.Steffaanus.native_geofence.model
+package com.steffaanus.native_geofence.model
 
-import com.Steffaanus.native_geofence.generated.GeofenceCallbackParamsWire
-import com.Steffaanus.native_geofence.generated.GeofenceEvent
+import com.steffaanus.native_geofence.generated.GeofenceCallbackParamsWire
+import com.steffaanus.native_geofence.generated.GeofenceEvent
+import com.steffaanus.native_geofence.generated.ActiveGeofenceWire
+import com.steffaanus.native_geofence.generated.LocationWire
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -14,9 +16,9 @@ class GeofenceCallbackParamsStorage(
     companion object {
         fun fromWire(e: GeofenceCallbackParamsWire): GeofenceCallbackParamsStorage {
             return GeofenceCallbackParamsStorage(
-                e.geofences.map { ActiveGeofenceStorage.fromWire(it) }.toList(),
+                e.geofences.map { it: ActiveGeofenceWire -> ActiveGeofenceStorage.fromWire(it) }.toList(),
                 e.event,
-                e.location?.let { LocationStorage.fromWire(it) },
+                e.location?.let { it: LocationWire -> LocationStorage.fromWire(it) },
                 e.callbackHandle,
             )
         }
