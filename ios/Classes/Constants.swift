@@ -1,5 +1,5 @@
 class Constants {
-    static let PACKAGE_NAME = "com.chunkytofustudios.native_geofence"
+    static let PACKAGE_NAME = "com.Steffaanus.native_geofence"
     
     static let HEADLESS_FLUTTER_ENGINE_NAME = "NativeGeofenceIsolate"
     

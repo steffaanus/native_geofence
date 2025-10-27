@@ -1,4 +1,4 @@
-package com.chunkytofustudios.native_geofence.util
+package com.Steffaanus.native_geofence.util
 
 import android.annotation.SuppressLint
 import android.app.Notification

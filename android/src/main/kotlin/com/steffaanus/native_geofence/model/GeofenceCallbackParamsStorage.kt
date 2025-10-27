@@ -1,7 +1,7 @@
-package com.chunkytofustudios.native_geofence.model
+package com.Steffaanus.native_geofence.model
 
-import com.chunkytofustudios.native_geofence.generated.GeofenceCallbackParamsWire
-import com.chunkytofustudios.native_geofence.generated.GeofenceEvent
+import com.Steffaanus.native_geofence.generated.GeofenceCallbackParamsWire
+import com.Steffaanus.native_geofence.generated.GeofenceEvent
 import kotlinx.serialization.Serializable
 
 @Serializable

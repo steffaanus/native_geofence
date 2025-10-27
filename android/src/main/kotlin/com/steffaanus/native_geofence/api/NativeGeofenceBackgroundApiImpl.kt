@@ -1,12 +1,12 @@
-package com.chunkytofustudios.native_geofence.api
+package com.Steffaanus.native_geofence.api
 
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.chunkytofustudios.native_geofence.Constants
-import com.chunkytofustudios.native_geofence.NativeGeofenceForegroundService
-import com.chunkytofustudios.native_geofence.NativeGeofenceBackgroundWorker
-import com.chunkytofustudios.native_geofence.generated.NativeGeofenceBackgroundApi
+import com.Steffaanus.native_geofence.Constants
+import com.Steffaanus.native_geofence.NativeGeofenceForegroundService
+import com.Steffaanus.native_geofence.NativeGeofenceBackgroundWorker
+import com.Steffaanus.native_geofence.generated.NativeGeofenceBackgroundApi
 
 class NativeGeofenceBackgroundApiImpl(
     private val context: Context,

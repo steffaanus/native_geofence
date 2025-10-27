@@ -1,8 +1,8 @@
-package com.chunkytofustudios.native_geofence
+package com.Steffaanus.native_geofence
 
 class Constants {
     companion object {
-        private const val PACKAGE_NAME = "com.chunkytofustudios.native_geofence"
+        private const val PACKAGE_NAME = "com.Steffaanus.native_geofence"
 
         const val SHARED_PREFERENCES_KEY = "native_geofence_plugin_cache"
         const val PERSISTENT_GEOFENCES_IDS_KEY = "persistent_geofences_ids"

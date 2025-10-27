@@ -1,6 +1,6 @@
-package com.chunkytofustudios.native_geofence.util
+package com.Steffaanus.native_geofence.util
 
-import com.chunkytofustudios.native_geofence.generated.GeofenceEvent
+import com.Steffaanus.native_geofence.generated.GeofenceEvent
 import com.google.android.gms.location.Geofence
 
 class GeofenceEvents {

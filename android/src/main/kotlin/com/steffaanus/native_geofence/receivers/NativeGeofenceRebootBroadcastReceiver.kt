@@ -1,10 +1,10 @@
-package com.chunkytofustudios.native_geofence.receivers
+package com.Steffaanus.native_geofence.receivers
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.chunkytofustudios.native_geofence.api.NativeGeofenceApiImpl
+import com.Steffaanus.native_geofence.api.NativeGeofenceApiImpl
 
 class NativeGeofenceRebootBroadcastReceiver : BroadcastReceiver() {
     companion object {

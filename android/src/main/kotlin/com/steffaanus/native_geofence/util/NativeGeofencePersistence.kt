@@ -1,10 +1,10 @@
-package com.chunkytofustudios.native_geofence.util
+package com.Steffaanus.native_geofence.util
 
 import android.content.Context
 import android.util.Log
-import com.chunkytofustudios.native_geofence.Constants
-import com.chunkytofustudios.native_geofence.generated.GeofenceWire
-import com.chunkytofustudios.native_geofence.model.GeofenceStorage
+import com.Steffaanus.native_geofence.Constants
+import com.Steffaanus.native_geofence.generated.GeofenceWire
+import com.Steffaanus.native_geofence.model.GeofenceStorage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 

@@ -35,27 +35,27 @@ Follow the guide [here](https://docs.flutter.dev/release/breaking-changes/kotlin
 
 The latest Kotlin version can be found [here](https://mvnrepository.com/artifact/org.jetbrains.kotlin.android/org.jetbrains.kotlin.android.gradle.plugin). Note that as of Jan 2025 Flutter does not work well with Kotlin 2+.
 
-NOTE: You may also need Gradle 8+ to use this plugin. See this [issue](https://github.com/ChunkyTofuStudios/native_geofence/issues/4).
+NOTE: You may also need Gradle 8+ to use this plugin. See this [issue](https://github.com/Steffaanus/native_geofence/issues/4).
 
 2. Set your `minSdkVersion` to `26` or above.
 
 *Explanation: If you need to support prior Android builds it might be possible to accommodate this. Please send a PR or file a bug.*
 
-See the [example plugin](https://github.com/ChunkyTofuStudios/native_geofence/blob/main/example/android/app/src/main/AndroidManifest.xml) for a full demonstration.
+See the [example plugin](https://github.com/Steffaanus/native_geofence/blob/main/example/android/app/src/main/AndroidManifest.xml) for a full demonstration.
 
 3. In your `AndroidManifest.xml` add the following lines right before `</application>`:
 
 ```xml
 <!-- Used by plugin: native_geofence -->
-<receiver android:name="com.chunkytofustudios.native_geofence.receivers.NativeGeofenceBroadcastReceiver"
+<receiver android:name="com.Steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver"
           android:exported="true"/>
-<receiver android:name="com.chunkytofustudios.native_geofence.receivers.NativeGeofenceRebootBroadcastReceiver"
+<receiver android:name="com.Steffaanus.native_geofence.receivers.NativeGeofenceRebootBroadcastReceiver"
           android:exported="true">
     <intent-filter>
         <action android:name="android.intent.action.BOOT_COMPLETED"></action>
     </intent-filter>
 </receiver>
-<service android:name="com.chunkytofustudios.native_geofence.NativeGeofenceForegroundService"
+<service android:name="com.Steffaanus.native_geofence.NativeGeofenceForegroundService"
           android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
 ```
 
@@ -152,7 +152,7 @@ You can do so in your `Podfile` by adding the line `platform :ios, '14.0'`.
 
 *Explanation: If you need to support prior iOS builds it might be possible to accommodate this. Please send a PR or file a bug.*
 
-See the [example plugin](https://github.com/ChunkyTofuStudios/native_geofence/tree/main/example/ios/Runner) for a full demonstration.
+See the [example plugin](https://github.com/Steffaanus/native_geofence/tree/main/example/ios/Runner) for a full demonstration.
 
 </details>
 
@@ -290,7 +290,7 @@ This plugin is based off of [bkonyi/FlutterGeofencing](https://github.com/bkonyi
 
 ## Contributing
 
-Please file any issues, bugs, or feature requests at [GitHub](https://github.com/ChunkyTofuStudios/native_geofence/issues).
+Please file any issues, bugs, or feature requests at [GitHub](https://github.com/Steffaanus/native_geofence/issues).
 
 Pull requests are welcome.
 
@@ -307,8 +307,8 @@ Pull requests are welcome.
 
 ## Author
 
-This plugin is developed by [Chunky Tofu Studios](https://chunkytofustudios.com).
+This plugin is developed by [Chunky Tofu Studios](https://Steffaanus.com).
 
 You can support us by checking out our apps!
 
-For commercial support please reach out to hello@chunkytofustudios.com.
+For commercial support please reach out to hello@Steffaanus.com.

@@ -9,9 +9,9 @@ Pod::Spec.new do |s|
   s.description      = <<-DESC
 Battery efficient Flutter Geofencing that uses native iOS and Android APIs.
                        DESC
-  s.homepage         = 'https://chunkytofustudios.com'
+  s.homepage         = 'https://Steffaanus.com'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Chunky Tofu Studios' => 'supportl@chunkytofustudios.com' }
+  s.author           = { 'Chunky Tofu Studios' => 'supportl@Steffaanus.com' }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'

@@ -1,6 +1,6 @@
-package com.chunkytofustudios.native_geofence.util
+package com.Steffaanus.native_geofence.util
 
-import com.chunkytofustudios.native_geofence.generated.GeofenceWire
+import com.Steffaanus.native_geofence.generated.GeofenceWire
 import com.google.android.gms.location.Geofence
 
 class GeofenceWires {

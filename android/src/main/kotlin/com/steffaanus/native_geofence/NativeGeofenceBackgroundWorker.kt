@@ -1,4 +1,4 @@
-package com.chunkytofustudios.native_geofence
+package com.Steffaanus.native_geofence
 
 import android.content.Context
 import android.os.Build
@@ -9,12 +9,12 @@ import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.work.ForegroundInfo
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
-import com.chunkytofustudios.native_geofence.api.NativeGeofenceBackgroundApiImpl
-import com.chunkytofustudios.native_geofence.generated.GeofenceCallbackParamsWire
-import com.chunkytofustudios.native_geofence.generated.NativeGeofenceBackgroundApi
-import com.chunkytofustudios.native_geofence.generated.NativeGeofenceTriggerApi
-import com.chunkytofustudios.native_geofence.model.GeofenceCallbackParamsStorage
-import com.chunkytofustudios.native_geofence.util.Notifications
+import com.Steffaanus.native_geofence.api.NativeGeofenceBackgroundApiImpl
+import com.Steffaanus.native_geofence.generated.GeofenceCallbackParamsWire
+import com.Steffaanus.native_geofence.generated.NativeGeofenceBackgroundApi
+import com.Steffaanus.native_geofence.generated.NativeGeofenceTriggerApi
+import com.Steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
+import com.Steffaanus.native_geofence.util.Notifications
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import io.flutter.FlutterInjector

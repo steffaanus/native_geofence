@@ -1,4 +1,4 @@
-package com.chunkytofustudios.native_geofence.model
+package com.Steffaanus.native_geofence.model
 
 import kotlinx.serialization.Serializable
 

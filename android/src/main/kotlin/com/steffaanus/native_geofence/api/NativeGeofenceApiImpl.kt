@@ -1,4 +1,4 @@
-package com.chunkytofustudios.native_geofence.api
+package com.Steffaanus.native_geofence.api
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -9,17 +9,17 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.chunkytofustudios.native_geofence.Constants
-import com.chunkytofustudios.native_geofence.generated.ActiveGeofenceWire
-import com.chunkytofustudios.native_geofence.generated.FlutterError
-import com.chunkytofustudios.native_geofence.generated.GeofenceWire
-import com.chunkytofustudios.native_geofence.generated.NativeGeofenceApi
-import com.chunkytofustudios.native_geofence.generated.NativeGeofenceErrorCode
-import com.chunkytofustudios.native_geofence.util.GeofenceEvents
-import com.chunkytofustudios.native_geofence.receivers.NativeGeofenceBroadcastReceiver
-import com.chunkytofustudios.native_geofence.util.ActiveGeofenceWires
-import com.chunkytofustudios.native_geofence.util.GeofenceWires
-import com.chunkytofustudios.native_geofence.util.NativeGeofencePersistence
+import com.Steffaanus.native_geofence.Constants
+import com.Steffaanus.native_geofence.generated.ActiveGeofenceWire
+import com.Steffaanus.native_geofence.generated.FlutterError
+import com.Steffaanus.native_geofence.generated.GeofenceWire
+import com.Steffaanus.native_geofence.generated.NativeGeofenceApi
+import com.Steffaanus.native_geofence.generated.NativeGeofenceErrorCode
+import com.Steffaanus.native_geofence.util.GeofenceEvents
+import com.Steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver
+import com.Steffaanus.native_geofence.util.ActiveGeofenceWires
+import com.Steffaanus.native_geofence.util.GeofenceWires
+import com.Steffaanus.native_geofence.util.NativeGeofencePersistence
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
 
