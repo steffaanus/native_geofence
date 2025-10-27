@@ -58,10 +58,6 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         Log.d(TAG, "${geofences.size} geofences synced.")
     }
 
-    override fun reCreateAfterReboot() {
-        syncGeofences()
-    }
-
     override fun getGeofenceIds(): List<String> {
         return NativeGeofencePersistence.getAllGeofenceIds(context)
     }

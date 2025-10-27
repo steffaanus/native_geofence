@@ -136,7 +136,7 @@ func deepHashFlutterBindings(value: Any?, hasher: inout Hasher) {
 ///
 /// See the helpful illustration at:
 /// https://developer.android.com/develop/sensors-and-location/location/geofencing
-enum GeofenceEvent: Int, Codable {
+enum GeofenceEvent: Int {
   case enter = 0
   case exit = 1
   /// Not supported on iOS.
@@ -182,7 +182,7 @@ enum NativeGeofenceErrorCode: Int {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct LocationWire: Hashable, Codable {
+struct LocationWire: Hashable {
   var latitude: Double
   var longitude: Double
 
@@ -211,7 +211,7 @@ struct LocationWire: Hashable, Codable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct IosGeofenceSettingsWire: Hashable, Codable {
+struct IosGeofenceSettingsWire: Hashable {
   var initialTrigger: Bool
 
 
@@ -236,7 +236,7 @@ struct IosGeofenceSettingsWire: Hashable, Codable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct AndroidGeofenceSettingsWire: Hashable, Codable {
+struct AndroidGeofenceSettingsWire: Hashable {
   var initialTriggers: [GeofenceEvent]
   var expirationDurationMillis: Int64? = nil
   var loiteringDelayMillis: Int64
@@ -273,7 +273,7 @@ struct AndroidGeofenceSettingsWire: Hashable, Codable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct GeofenceWire: Hashable, Codable {
+struct GeofenceWire: Hashable {
   var id: String
   var location: LocationWire
   var radiusMeters: Double
@@ -483,7 +483,6 @@ class FlutterBindingsPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendab
 protocol NativeGeofenceApi {
   func initialize(callbackDispatcherHandle: Int64) throws
   func createGeofence(geofence: GeofenceWire, completion: @escaping (Result<Void, Error>) -> Void)
-  func reCreateAfterReboot() throws
   func getGeofenceIds() throws -> [String]
   func getGeofences() throws -> [ActiveGeofenceWire]
   func removeGeofenceById(id: String, completion: @escaping (Result<Void, Error>) -> Void)
@@ -527,19 +526,6 @@ class NativeGeofenceApiSetup {
       }
     } else {
       createGeofenceChannel.setMessageHandler(nil)
-    }
-    let reCreateAfterRebootChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.native_geofence.NativeGeofenceApi.reCreateAfterReboot\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
-    if let api = api {
-      reCreateAfterRebootChannel.setMessageHandler { _, reply in
-        do {
-          try api.reCreateAfterReboot()
-          reply(wrapResult(nil))
-        } catch {
-          reply(wrapError(error))
-        }
-      }
-    } else {
-      reCreateAfterRebootChannel.setMessageHandler(nil)
     }
     let getGeofenceIdsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.native_geofence.NativeGeofenceApi.getGeofenceIds\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

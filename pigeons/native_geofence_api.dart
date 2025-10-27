@@ -8,9 +8,9 @@ import 'package:pigeon/pigeon.dart';
   dartPackageName: 'native_geofence',
   swiftOut: 'ios/Classes/Generated/FlutterBindings.g.swift',
   kotlinOut:
-      'android/src/main/kotlin/com/Steffaanus/native_geofence/generated/FlutterBindings.g.kt',
+      'android/src/main/kotlin/com/steffaanus/native_geofence/generated/FlutterBindings.g.kt',
   kotlinOptions:
-      KotlinOptions(package: 'com.Steffaanus.native_geofence.generated'),
+      KotlinOptions(package: 'com.steffaanus.native_geofence.generated'),
 ))
 
 /// Geofencing events.
@@ -157,8 +157,6 @@ abstract class NativeGeofenceApi {
 
   @async
   void createGeofence({required GeofenceWire geofence});
-
-  void reCreateAfterReboot();
 
   List<String> getGeofenceIds();
 

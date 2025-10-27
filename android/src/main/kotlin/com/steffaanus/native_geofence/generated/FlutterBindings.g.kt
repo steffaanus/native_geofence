@@ -2,7 +2,7 @@
 // See also: https://pub.dev/packages/pigeon
 @file:Suppress("UNCHECKED_CAST", "ArrayInDataClass")
 
-package com.Steffaanus.native_geofence.generated
+package com.steffaanus.native_geofence.generated
 
 import android.util.Log
 import io.flutter.plugin.common.BasicMessageChannel
@@ -462,7 +462,6 @@ private open class FlutterBindingsPigeonCodec : StandardMessageCodec() {
 interface NativeGeofenceApi {
   fun initialize(callbackDispatcherHandle: Long)
   fun createGeofence(geofence: GeofenceWire, callback: (Result<Unit>) -> Unit)
-  fun reCreateAfterReboot()
   fun getGeofenceIds(): List<String>
   fun getGeofences(): List<ActiveGeofenceWire>
   fun removeGeofenceById(id: String, callback: (Result<Unit>) -> Unit)
@@ -509,22 +508,6 @@ interface NativeGeofenceApi {
                 reply.reply(FlutterBindingsPigeonUtils.wrapResult(null))
               }
             }
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.native_geofence.NativeGeofenceApi.reCreateAfterReboot$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { _, reply ->
-            val wrapped: List<Any?> = try {
-              api.reCreateAfterReboot()
-              listOf(null)
-            } catch (exception: Throwable) {
-              FlutterBindingsPigeonUtils.wrapError(exception)
-            }
-            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)

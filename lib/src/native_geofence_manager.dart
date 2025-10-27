@@ -96,17 +96,6 @@ class NativeGeofenceManager {
         .catchError(NativeGeofenceExceptionMapper.catchError<void>);
   }
 
-  /// Re-register geofences after reboot.
-  ///
-  /// Optiona: This function can be called when the autostart feature is not
-  /// working as it should (e.g. for some Android OEMs). This way you can ensure
-  /// all Geofences are re-created at app launch.
-  ///
-  /// Throws [NativeGeofenceException].
-  Future<void> reCreateAfterReboot() async => _api
-      .reCreateAfterReboot()
-      .catchError(NativeGeofenceExceptionMapper.catchError<void>);
-
   /// Get all registered [Geofence] IDs.
   ///
   /// If there are no geofences registered it returns an empty list.

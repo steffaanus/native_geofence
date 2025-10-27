@@ -130,12 +130,6 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
         log.debug("Sync complete. \(toAdd.count) added, \(toRemove.count) removed.")
     }
     
-    // Legacy method, now calls syncGeofences
-    func reCreateAfterReboot() throws {
-        log.info("reCreateAfterReboot() called. Syncing geofences instead.")
-        syncGeofences()
-    }
-    
     func getGeofenceIds() throws -> [String] {
         let geofenceIds = Array(NativeGeofencePersistence.getAllGeofences().keys)
         log.debug("getGeofenceIds() found \(geofenceIds.count) geofence(s).")
