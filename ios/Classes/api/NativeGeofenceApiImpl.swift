@@ -7,8 +7,10 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
     private let log = Logger(subsystem: Constants.PACKAGE_NAME, category: "NativeGeofenceApiImpl")
     
     private let locationManagerDelegate: LocationManagerDelegate
-    
+    private let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
+
     init(registerPlugins: FlutterPluginRegistrantCallback) {
+        self.flutterPluginRegistrantCallback = registerPlugins
         self.locationManagerDelegate = LocationManagerDelegate(flutterPluginRegistrantCallback: registerPlugins)
     }
     
@@ -19,7 +21,7 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
         migrateLegacyData()
         
         // Start the engine and then sync. The completion handler ensures sync happens after the engine is running.
-        EngineManager.shared.startEngine(withPluginRegistrant: locationManagerDelegate.flutterPluginRegistrantCallback!) {
+        EngineManager.shared.startEngine(withPluginRegistrant: flutterPluginRegistrantCallback!) {
             self.syncGeofences()
         }
     }

@@ -9,7 +9,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     
     private let log = Logger(subsystem: Constants.PACKAGE_NAME, category: "LocationManagerDelegate")
     
-    private let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
+    let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
     let locationManager: CLLocationManager
     
     init(flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?) {
