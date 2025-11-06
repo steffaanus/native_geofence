@@ -1,6 +1,15 @@
 import CoreLocation
 
 class ActiveGeofenceWires {
+    static func fromGeofenceWire(_ geofence: GeofenceWire) -> ActiveGeofenceWire {
+        return ActiveGeofenceWire(
+            id: geofence.id,
+            location: geofence.location,
+            radiusMeters: geofence.radiusMeters,
+            triggers: geofence.triggers
+        )
+    }
+
     static func fromRegion(_ region: CLRegion) -> ActiveGeofenceWire? {
         guard let circularRegion = region as? CLCircularRegion else { return nil }
         return ActiveGeofenceWire(
