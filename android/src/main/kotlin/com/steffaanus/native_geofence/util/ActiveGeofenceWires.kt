@@ -1,32 +1,27 @@
 package com.steffaanus.native_geofence.util
 
-import com.steffaanus.native_geofence.generated.ActiveGeofenceWire
-import com.steffaanus.native_geofence.generated.AndroidGeofenceSettingsWire
+import com.steffaanus.native_geofence.generated.ActiveGeofence
+import com.steffaanus.native_geofence.generated.AndroidGeofenceSettings
+import com.steffaanus.native_geofence.generated.Geofence
 import com.steffaanus.native_geofence.generated.GeofenceStatus
-import com.steffaanus.native_geofence.generated.GeofenceWire
-import com.steffaanus.native_geofence.generated.LocationWire
+import com.steffaanus.native_geofence.generated.Location
 import com.google.android.gms.location.Geofence
 
 class ActiveGeofenceWires {
     companion object {
-        fun fromGeofence(e: Geofence): ActiveGeofenceWire {
-            return ActiveGeofenceWire(
-                e.requestId,
-                LocationWire(e.latitude, e.longitude),
-                e.radius.toDouble(),
-                GeofenceEvents.fromMask(e.transitionTypes),
-                AndroidGeofenceSettingsWire(
-                    emptyList(),
-                    e.expirationTime,
-                    e.loiteringDelay.toLong(),
-                    e.notificationResponsiveness.toLong()
-                ),
-                status = GeofenceStatus.ACTIVE,
+        fun fromGeofence(e: Geofence): ActiveGeofence {
+            return ActiveGeofence(
+                e.id,
+                e.location,
+                e.radiusMeters,
+                e.triggers,
+                e.androidSettings,
+                GeofenceStatus.ACTIVE
             )
         }
 
-        fun fromGeofenceWire(e: GeofenceWire, status: GeofenceStatus): ActiveGeofenceWire {
-            return ActiveGeofenceWire(
+        fun fromGeofence(e: Geofence, status: GeofenceStatus): ActiveGeofence {
+            return ActiveGeofence(
                 e.id,
                 e.location,
                 e.radiusMeters,

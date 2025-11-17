@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:native_geofence/src/generated/platform_bindings.g.dart';
-import 'package:native_geofence/src/model/model_mapper.dart';
 import 'package:native_geofence/src/model/native_geofence_exception.dart';
 
 class NativeGeofenceBackgroundManager {

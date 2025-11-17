@@ -8,3 +8,8 @@ pubspec.lock
 .idea/
 
 build/
+
+# Generated files
+lib/src/generated/platform_bindings.g.dart
+android/src/main/kotlin/com/steffaanus/native_geofence/generated/FlutterBindings.g.kt
+ios/Classes/Generated/FlutterBindings.g.swift

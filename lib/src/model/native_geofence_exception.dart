@@ -1,33 +1,41 @@
 import 'package:native_geofence/src/generated/platform_bindings.g.dart';
 
-/// All exceptions thrown by native_geofence will be of this type.
 class NativeGeofenceException implements Exception {
   final NativeGeofenceErrorCode code;
   final String? message;
   final dynamic details;
-  final String? stacktrace;
 
-  NativeGeofenceException({
-    required this.code,
-    this.message,
-    this.details,
-    this.stacktrace,
-  });
+  const NativeGeofenceException(this.code, {this.message, this.details});
 
-  NativeGeofenceException.internal({
-    required String this.message,
-    this.details,
-  })  : code = NativeGeofenceErrorCode.pluginInternal,
-        stacktrace = StackTrace.current.toString();
+  factory NativeGeofenceException.internal({String? message, dynamic details}) =>
+      NativeGeofenceException(
+        NativeGeofenceErrorCode.pluginInternal,
+        message: message,
+        details: details,
+      );
 
-  NativeGeofenceException.invalidArgument({
-    required String this.message,
-    this.details,
-  })  : code = NativeGeofenceErrorCode.invalidArguments,
-        stacktrace = StackTrace.current.toString();
+  factory NativeGeofenceException.invalidArgument(
+          {String? message, dynamic details}) =>
+      NativeGeofenceException(
+        NativeGeofenceErrorCode.invalidArguments,
+        message: message,
+        details: details,
+      );
+}
 
-  @override
-  String toString() =>
-      'NativeGeofenceException(${code.name}, message=$message, '
-      'details=$details, stacktrace=$stacktrace)';
+class NativeGeofenceExceptionMapper {
+  static NativeGeofenceException fromError(Object error, StackTrace stackTrace) {
+    if (error is NativeGeofenceException) {
+      return error;
+    }
+    return NativeGeofenceException(
+      NativeGeofenceErrorCode.channelError,
+      message: error.toString(),
+      details: stackTrace.toString(),
+    );
+  }
+
+  static T catchError<T>(Object error, StackTrace stackTrace) {
+    throw fromError(error, stackTrace);
+  }
 }

@@ -11,7 +11,7 @@ class CreateGeofence extends StatefulWidget {
 }
 
 class CreateGeofenceState extends State<CreateGeofence> {
-  static const Location _timesSquare =
+  static final Location _timesSquare =
       Location(latitude: 40.75798, longitude: -73.98554);
 
   List<String> activeGeofences = [];
@@ -21,20 +21,21 @@ class CreateGeofenceState extends State<CreateGeofence> {
   void initState() {
     super.initState();
     data = Geofence(
-      id: 'zone1',
-      location: _timesSquare,
-      radiusMeters: 500,
-      triggers: {
-        GeofenceEvent.enter,
-        GeofenceEvent.exit,
-      },
-      iosSettings: IosGeofenceSettings(
-        initialTrigger: true,
-      ),
-      androidSettings: AndroidGeofenceSettings(
-        initialTriggers: {GeofenceEvent.enter},
-      ),
-    );
+        id: 'zone1',
+        location: _timesSquare,
+        radiusMeters: 500,
+        triggers: [
+          GeofenceEvent.enter,
+          GeofenceEvent.exit,
+        ],
+        iosSettings: IosGeofenceSettings(
+          initialTrigger: true,
+        ),
+        androidSettings: AndroidGeofenceSettings(
+          initialTriggers: [GeofenceEvent.enter],
+          loiteringDelayMillis: 1000,
+        ),
+        callbackHandle: 0);
     _updateRegisteredGeofences();
   }
 
@@ -54,32 +55,63 @@ class CreateGeofenceState extends State<CreateGeofence> {
                 decoration: InputDecoration(labelText: 'ID'),
                 initialValue: data.id,
                 onChanged: (String value) =>
-                    data = data.copyWith(id: () => value),
+                    data = Geofence(
+                        id: value,
+                        location: data.location,
+                        radiusMeters: data.radiusMeters,
+                        triggers: data.triggers,
+                        iosSettings: data.iosSettings,
+                        androidSettings: data.androidSettings,
+                        callbackHandle: data.callbackHandle)
               ),
               SizedBox(height: 16),
               TextFormField(
                 decoration: InputDecoration(labelText: 'Latitude'),
                 initialValue: data.location.latitude.toString(),
-                onChanged: (String value) => data = data.copyWith(
-                  location: () =>
-                      data.location.copyWith(latitude: double.parse(value)),
-                ),
+                onChanged: (String value) {
+                  data = Geofence(
+                      id: data.id,
+                      location: Location(
+                          latitude: double.parse(value),
+                          longitude: data.location.longitude),
+                      radiusMeters: data.radiusMeters,
+                      triggers: data.triggers,
+                      iosSettings: data.iosSettings,
+                      androidSettings: data.androidSettings,
+                      callbackHandle: data.callbackHandle);
+                },
               ),
               SizedBox(height: 10),
               TextFormField(
                 decoration: InputDecoration(labelText: 'Longitude'),
                 initialValue: data.location.longitude.toString(),
-                onChanged: (String value) => data = data.copyWith(
-                  location: () =>
-                      data.location.copyWith(longitude: double.parse(value)),
-                ),
+                onChanged: (String value) {
+                  data = Geofence(
+                      id: data.id,
+                      location: Location(
+                          latitude: data.location.latitude,
+                          longitude: double.parse(value)),
+                      radiusMeters: data.radiusMeters,
+                      triggers: data.triggers,
+                      iosSettings: data.iosSettings,
+                      androidSettings: data.androidSettings,
+                      callbackHandle: data.callbackHandle);
+                },
               ),
               SizedBox(height: 16),
               TextFormField(
                 decoration: InputDecoration(labelText: 'Radius (meters)'),
                 initialValue: data.radiusMeters.toString(),
-                onChanged: (String value) => data =
-                    data.copyWith(radiusMeters: () => double.parse(value)),
+                onChanged: (String value) {
+                  data = Geofence(
+                      id: data.id,
+                      location: data.location,
+                      radiusMeters: double.parse(value),
+                      triggers: data.triggers,
+                      iosSettings: data.iosSettings,
+                      androidSettings: data.androidSettings,
+                      callbackHandle: data.callbackHandle);
+                },
               ),
               SizedBox(height: 22),
               ElevatedButton(
@@ -137,51 +169,3 @@ Future<bool> _checkPermissions() async {
       notificationPerm.isGranted;
 }
 
-extension ModifyGeofence on Geofence {
-  Geofence copyWith({
-    String Function()? id,
-    Location Function()? location,
-    double Function()? radiusMeters,
-    Set<GeofenceEvent> Function()? triggers,
-    IosGeofenceSettings Function()? iosSettings,
-    AndroidGeofenceSettings Function()? androidSettings,
-  }) {
-    return Geofence(
-      id: id?.call() ?? this.id,
-      location: location?.call() ?? this.location,
-      radiusMeters: radiusMeters?.call() ?? this.radiusMeters,
-      triggers: triggers?.call() ?? this.triggers,
-      iosSettings: iosSettings?.call() ?? this.iosSettings,
-      androidSettings: androidSettings?.call() ?? this.androidSettings,
-    );
-  }
-}
-
-extension ModifyLocation on Location {
-  Location copyWith({
-    double? latitude,
-    double? longitude,
-  }) {
-    return Location(
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-    );
-  }
-}
-
-extension ModifyAndroidGeofenceSettings on AndroidGeofenceSettings {
-  AndroidGeofenceSettings copyWith({
-    Set<GeofenceEvent> Function()? initialTrigger,
-    Duration Function()? expiration,
-    Duration Function()? loiteringDelay,
-    Duration Function()? notificationResponsiveness,
-  }) {
-    return AndroidGeofenceSettings(
-      initialTriggers: initialTrigger?.call() ?? initialTriggers,
-      expiration: expiration?.call() ?? this.expiration,
-      loiteringDelay: loiteringDelay?.call() ?? this.loiteringDelay,
-      notificationResponsiveness:
-          notificationResponsiveness?.call() ?? this.notificationResponsiveness,
-    );
-  }
-}

@@ -3,8 +3,6 @@ import 'dart:ui';
 
 import 'package:native_geofence/src/callback_dispatcher.dart';
 import 'package:native_geofence/src/generated/platform_bindings.g.dart';
-import 'package:native_geofence/src/model/model.dart';
-import 'package:native_geofence/src/model/model_mapper.dart';
 import 'package:native_geofence/src/model/native_geofence_exception.dart';
 import 'package:native_geofence/src/platform/module.dart';
 import 'package:native_geofence/src/typedefs.dart';
@@ -67,10 +65,6 @@ class NativeGeofenceManager {
       throw NativeGeofenceException.invalidArgument(
           message: 'Geofence triggers cannot be empty.');
     }
-    if (!geofence.location.isValid) {
-      throw NativeGeofenceException.invalidArgument(
-          message: 'Geofence location is invalid.');
-    }
     if (geofence.radiusMeters <= 0) {
       throw NativeGeofenceException.invalidArgument(
           message: 'Geofence radius must be strictly positive.');
@@ -92,7 +86,7 @@ class NativeGeofenceManager {
           message: 'Callback is invalid.');
     }
     return _api
-        .createGeofence(geofence: geofence.toWire(callbackHandle.toRawHandle()))
+        .createGeofence(geofence: geofence)
         .catchError(NativeGeofenceExceptionMapper.catchError<void>);
   }
 
@@ -110,11 +104,10 @@ class NativeGeofenceManager {
   /// If there are no geofences registered it returns an empty list.
   ///
   /// Throws [NativeGeofenceException].
-  Future<List<ActiveGeofence>> getRegisteredGeofences() async => _api
-      .getGeofences()
-      .then((value) => value.map((e) => e!.fromWire()).toList())
-      .catchError(
-          NativeGeofenceExceptionMapper.catchError<List<ActiveGeofence>>);
+  Future<List<ActiveGeofence>> getRegisteredGeofences() async =>
+      _api.getGeofences().catchError(
+            NativeGeofenceExceptionMapper.catchError<List<ActiveGeofence>>,
+          );
 
   /// Stop receiving geofence events for a given [Geofence].
   ///

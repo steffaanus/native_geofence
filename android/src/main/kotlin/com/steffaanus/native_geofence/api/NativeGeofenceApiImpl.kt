@@ -9,17 +9,16 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.steffaanus.native_geofence.model.GeofenceStatus
 import com.steffaanus.native_geofence.model.GeofenceStorage
 import com.steffaanus.native_geofence.Constants
-import com.steffaanus.native_geofence.generated.ActiveGeofenceWire
+import com.steffaanus.native_geofence.generated.ActiveGeofence
 import com.steffaanus.native_geofence.generated.FlutterError
-import com.steffaanus.native_geofence.generated.GeofenceWire
+import com.steffaanus.native_geofence.generated.Geofence
+import com.steffaanus.native_geofence.generated.GeofenceStatus
 import com.steffaanus.native_geofence.generated.NativeGeofenceApi
 import com.steffaanus.native_geofence.generated.NativeGeofenceErrorCode
 import com.steffaanus.native_geofence.util.GeofenceEvents
 import com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver
-import com.steffaanus.native_geofence.generated.GeofenceStatus as GeofenceStatusWire
 import com.steffaanus.native_geofence.util.ActiveGeofenceWires
 import com.steffaanus.native_geofence.util.GeofenceWires
 import com.steffaanus.native_geofence.util.NativeGeofencePersistence
@@ -44,7 +43,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     }
 
     override fun createGeofence(
-        geofence: GeofenceWire,
+        geofence: Geofence,
         callback: (Result<Unit>) -> Unit
     ) {
         createGeofenceHelper(geofence, true, callback)
@@ -63,12 +62,12 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         return NativeGeofencePersistence.getAllGeofenceIds(context)
     }
 
-    override fun getGeofences(): List<ActiveGeofenceWire> {
+    override fun getGeofences(): List<ActiveGeofence> {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         return geofences.map {
-            ActiveGeofenceWires.fromGeofenceWire(
+            ActiveGeofenceWires.fromGeofence(
                 it.toWire(),
-                toGeofenceStatusWire(it.status)
+                it.status
             )
         }.toList()
     }
@@ -118,13 +117,6 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         }
     }
 
-    private fun toGeofenceStatusWire(status: GeofenceStatus): GeofenceStatusWire {
-        return when (status) {
-            GeofenceStatus.PENDING -> GeofenceStatusWire.PENDING
-            GeofenceStatus.ACTIVE -> GeofenceStatusWire.ACTIVE
-            GeofenceStatus.FAILED -> GeofenceStatusWire.FAILED
-        }
-    }
 
     private fun getGeofencePendingIndent(
         context: Context,
@@ -153,29 +145,29 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
 
     @SuppressLint("MissingPermission")
     private fun createGeofenceHelper(
-        geofenceWire: GeofenceWire,
+        geofence: Geofence,
         isNew: Boolean,
         callback: ((Result<Unit>) -> Unit)?
     ) {
         val geofenceStorage = if(isNew) {
             // If it's a new geofence, store it with PENDING status first.
-            val storage = GeofenceWires.toGeofenceStorage(geofenceWire)
+            val storage = GeofenceWires.toGeofenceStorage(geofence)
             storage.status = GeofenceStatus.PENDING
             NativeGeofencePersistence.saveOrUpdateGeofence(context, storage)
             storage
         } else {
             // This is a re-creation (e.g. after reboot), the storage entry already exists.
-            GeofenceWires.toGeofenceStorage(geofenceWire)
+            GeofenceWires.toGeofenceStorage(geofence)
         }
 
         // We try to create the Geofence without checking for permissions.
         // Only if creation fails we will alert the Flutter plugin of the permission issue.
         geofencingClient.addGeofences(
             GeofencingRequest.Builder().apply {
-                setInitialTrigger(GeofenceEvents.createMask(geofenceWire.androidSettings.initialTriggers))
-                addGeofence(GeofenceWires.toGeofence(geofenceWire))
+                setInitialTrigger(GeofenceEvents.createMask(geofence.androidSettings.initialTriggers))
+                addGeofence(GeofenceWires.toGeofence(geofence))
             }.build(),
-            getGeofencePendingIndent(context, geofenceWire.callbackHandle)
+            getGeofencePendingIndent(context, geofence.callbackHandle)
         ).run {
             addOnSuccessListener {
                  if (isNew) {
@@ -183,11 +175,11 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                     geofenceStorage.status = GeofenceStatus.ACTIVE
                     NativeGeofencePersistence.saveOrUpdateGeofence(context, geofenceStorage)
                 }
-                Log.d(TAG, "Successfully added Geofence ID=${geofenceWire.id}.")
+                Log.d(TAG, "Successfully added Geofence ID=${geofence.id}.")
                 callback?.invoke(Result.success(Unit))
             }
             addOnFailureListener {
-                Log.e(TAG, "Failed to add Geofence ID=${geofenceWire.id}: $it")
+                Log.e(TAG, "Failed to add Geofence ID=${geofence.id}: $it")
 
                 if (isNew) {
                     geofenceStorage.status = GeofenceStatus.FAILED

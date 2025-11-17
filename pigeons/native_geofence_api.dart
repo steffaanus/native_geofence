@@ -17,7 +17,7 @@ import 'package:pigeon/pigeon.dart';
 ///
 /// See the helpful illustration at:
 /// https://developer.android.com/develop/sensors-and-location/location/geofencing
-enum GeofenceEventWire {
+enum GeofenceEvent {
   enter,
   exit,
 
@@ -25,34 +25,34 @@ enum GeofenceEventWire {
   dwell,
 }
 
-enum GeofenceStatusWire {
+enum GeofenceStatus {
   pending,
   active,
   failed,
 }
 
-class LocationWire {
+class Location {
   final double latitude;
   final double longitude;
 
-  const LocationWire({required this.latitude, required this.longitude});
+  Location({required this.latitude, required this.longitude});
 }
 
-class IosGeofenceSettingsWire {
+class IosGeofenceSettings {
   final bool initialTrigger;
 
-  const IosGeofenceSettingsWire({
+  IosGeofenceSettings({
     required this.initialTrigger,
   });
 }
 
-class AndroidGeofenceSettingsWire {
-  final List<GeofenceEventWire> initialTriggers;
+class AndroidGeofenceSettings {
+  final List<GeofenceEvent> initialTriggers;
   final int? expirationDurationMillis;
   final int loiteringDelayMillis;
   final int? notificationResponsivenessMillis;
 
-  const AndroidGeofenceSettingsWire({
+  AndroidGeofenceSettings({
     required this.initialTriggers,
     this.expirationDurationMillis,
     required this.loiteringDelayMillis,
@@ -60,16 +60,16 @@ class AndroidGeofenceSettingsWire {
   });
 }
 
-class GeofenceWire {
+class Geofence {
   final String id;
-  final LocationWire location;
+  final Location location;
   final double radiusMeters;
-  final List<GeofenceEventWire> triggers;
-  final IosGeofenceSettingsWire iosSettings;
-  final AndroidGeofenceSettingsWire androidSettings;
+  final List<GeofenceEvent> triggers;
+  final IosGeofenceSettings iosSettings;
+  final AndroidGeofenceSettings androidSettings;
   final int callbackHandle;
 
-  const GeofenceWire({
+  Geofence({
     required this.id,
     required this.location,
     required this.radiusMeters,
@@ -80,17 +80,17 @@ class GeofenceWire {
   });
 }
 
-class ActiveGeofenceWire {
+class ActiveGeofence {
   final String id;
-  final LocationWire location;
+  final Location location;
   final double radiusMeters;
-  final List<GeofenceEventWire> triggers;
+  final List<GeofenceEvent> triggers;
 
-  final AndroidGeofenceSettingsWire? androidSettings;
+  final AndroidGeofenceSettings? androidSettings;
 
-  final GeofenceStatusWire status;
+  final GeofenceStatus status;
 
-  const ActiveGeofenceWire({
+  ActiveGeofence({
     required this.id,
     required this.location,
     required this.radiusMeters,
@@ -100,13 +100,13 @@ class ActiveGeofenceWire {
   });
 }
 
-class GeofenceCallbackParamsWire {
-  final List<ActiveGeofenceWire?> geofences;
-  final GeofenceEventWire event;
-  final LocationWire? location;
+class GeofenceCallbackParams {
+  final List<ActiveGeofence?> geofences;
+  final GeofenceEvent event;
+  final Location? location;
   final int callbackHandle;
 
-  const GeofenceCallbackParamsWire({
+  GeofenceCallbackParams({
     required this.geofences,
     required this.event,
     required this.location,
@@ -165,11 +165,11 @@ abstract class NativeGeofenceApi {
   void initialize({required int callbackDispatcherHandle});
 
   @async
-  void createGeofence({required GeofenceWire geofence});
+  void createGeofence({required Geofence geofence});
 
   List<String> getGeofenceIds();
 
-  List<ActiveGeofenceWire> getGeofences();
+  List<ActiveGeofence> getGeofences();
 
   @async
   void removeGeofenceById({required String id});
@@ -190,5 +190,5 @@ abstract class NativeGeofenceBackgroundApi {
 @FlutterApi()
 abstract class NativeGeofenceTriggerApi {
   @async
-  void geofenceTriggered(GeofenceCallbackParamsWire params);
+  void geofenceTriggered(GeofenceCallbackParams params);
 }

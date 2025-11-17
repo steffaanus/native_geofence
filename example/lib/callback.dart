@@ -7,6 +7,7 @@ import 'package:native_geofence/native_geofence.dart';
 import 'package:native_geofence_example/notifications_repository.dart';
 
 @pragma('vm:entry-point')
+
 Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
   debugPrint('geofenceTriggered params: $params');
   final SendPort? send =
@@ -19,11 +20,11 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
   await notificationsRepository.init();
 
   final title =
-      'Geofence ${capitalize(params.event.name)}: ${params.geofences.map((e) => e.id).join(', ')}';
+      'Geofence ${capitalize(params.event.name)}: ${params.geofences.map((e) => e?.id).join(', ')}';
   final message = 'Geofences:\n'
-      '${params.geofences.map((e) => '• ID: ${e.id}, '
-          'Radius=${e.radiusMeters.toStringAsFixed(0)}m, '
-          'Triggers=${e.triggers.map((e) => e.name).join(',')}').join('\n')}\n'
+      '${params.geofences.map((e) => '• ID: ${e?.id}, '
+          'Radius=${e?.radiusMeters.toStringAsFixed(0)}m, '
+          'Triggers=${e?.triggers.map((e) => e.name).join(',')}').join('\n')}\n'
       'Event: ${params.event.name}\n'
       'Location: ${params.location?.latitude.toStringAsFixed(5)}, '
       '${params.location?.longitude.toStringAsFixed(5)}';
