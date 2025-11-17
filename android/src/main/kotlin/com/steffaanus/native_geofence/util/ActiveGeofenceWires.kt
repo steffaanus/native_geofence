@@ -2,6 +2,7 @@ package com.steffaanus.native_geofence.util
 
 import com.steffaanus.native_geofence.generated.ActiveGeofenceWire
 import com.steffaanus.native_geofence.generated.AndroidGeofenceSettingsWire
+import com.steffaanus.native_geofence.generated.GeofenceStatus
 import com.steffaanus.native_geofence.generated.GeofenceWire
 import com.steffaanus.native_geofence.generated.LocationWire
 import com.google.android.gms.location.Geofence
@@ -19,17 +20,19 @@ class ActiveGeofenceWires {
                     e.expirationTime,
                     e.loiteringDelay.toLong(),
                     e.notificationResponsiveness.toLong()
-                )
+                ),
+                status = GeofenceStatus.ACTIVE,
             )
         }
 
-        fun fromGeofenceWire(e: GeofenceWire): ActiveGeofenceWire {
+        fun fromGeofenceWire(e: GeofenceWire, status: GeofenceStatus): ActiveGeofenceWire {
             return ActiveGeofenceWire(
                 e.id,
                 e.location,
                 e.radiusMeters,
                 e.triggers,
-                e.androidSettings
+                e.androidSettings,
+                status,
             )
         }
     }

@@ -19,6 +19,7 @@ import com.steffaanus.native_geofence.generated.NativeGeofenceApi
 import com.steffaanus.native_geofence.generated.NativeGeofenceErrorCode
 import com.steffaanus.native_geofence.util.GeofenceEvents
 import com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver
+import com.steffaanus.native_geofence.generated.GeofenceStatus as GeofenceStatusWire
 import com.steffaanus.native_geofence.util.ActiveGeofenceWires
 import com.steffaanus.native_geofence.util.GeofenceWires
 import com.steffaanus.native_geofence.util.NativeGeofencePersistence
@@ -64,7 +65,12 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
 
     override fun getGeofences(): List<ActiveGeofenceWire> {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
-        return geofences.map { ActiveGeofenceWires.fromGeofenceWire(it.toWire()) }.toList()
+        return geofences.map {
+            ActiveGeofenceWires.fromGeofenceWire(
+                it.toWire(),
+                toGeofenceStatusWire(it.status)
+            )
+        }.toList()
     }
 
     override fun removeGeofenceById(id: String, callback: (Result<Unit>) -> Unit) {
@@ -109,6 +115,14 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                     )
                 )
             }
+        }
+    }
+
+    private fun toGeofenceStatusWire(status: GeofenceStatus): GeofenceStatusWire {
+        return when (status) {
+            GeofenceStatus.PENDING -> GeofenceStatusWire.PENDING
+            GeofenceStatus.ACTIVE -> GeofenceStatusWire.ACTIVE
+            GeofenceStatus.FAILED -> GeofenceStatusWire.FAILED
         }
     }
 

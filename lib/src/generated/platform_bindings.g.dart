@@ -15,7 +15,8 @@ PlatformException _createConnectionError(String channelName) {
   );
 }
 
-List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty = false}) {
+List<Object?> wrapResponse(
+    {Object? result, PlatformException? error, bool empty = false}) {
   if (empty) {
     return <Object?>[];
   }
@@ -24,41 +25,53 @@ List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty
   }
   return <Object?>[error.code, error.message, error.details];
 }
+
 bool _deepEquals(Object? a, Object? b) {
   if (a is List && b is List) {
     return a.length == b.length &&
         a.indexed
-        .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
   }
   if (a is Map && b is Map) {
-    return a.length == b.length && a.entries.every((MapEntry<Object?, Object?> entry) =>
-        (b as Map<Object?, Object?>).containsKey(entry.key) &&
-        _deepEquals(entry.value, b[entry.key]));
+    return a.length == b.length &&
+        a.entries.every((MapEntry<Object?, Object?> entry) =>
+            (b as Map<Object?, Object?>).containsKey(entry.key) &&
+            _deepEquals(entry.value, b[entry.key]));
   }
   return a == b;
 }
-
 
 /// Geofencing events.
 ///
 /// See the helpful illustration at:
 /// https://developer.android.com/develop/sensors-and-location/location/geofencing
-enum GeofenceEvent {
+enum GeofenceEventWire {
   enter,
   exit,
+
   /// Not supported on iOS.
   dwell,
+}
+
+enum GeofenceStatusWire {
+  pending,
+  active,
+  failed,
 }
 
 /// Errors that can occur when interacting with the native geofence API.
 enum NativeGeofenceErrorCode {
   unknown,
+
   /// A plugin internal error. Please report these as bugs on GitHub.
   pluginInternal,
+
   /// The arguments passed to the method are invalid.
   invalidArguments,
+
   /// An error occurred while communicating with the native platform.
   channelError,
+
   /// The required location permission was not granted.
   ///
   /// On Android we need: `ACCESS_FINE_LOCATION`
@@ -67,6 +80,7 @@ enum NativeGeofenceErrorCode {
   /// Please use an external permission manager such as "permission_handler" to
   /// request the permission from the user.
   missingLocationPermission,
+
   /// The required background location permission was not granted.
   ///
   /// On Android we need: `ACCESS_BACKGROUND_LOCATION` (for API level 29+)
@@ -75,13 +89,16 @@ enum NativeGeofenceErrorCode {
   /// Please use an external permission manager such as "permission_handler" to
   /// request the permission from the user.
   missingBackgroundLocationPermission,
+
   /// The geofence deletion failed because the geofence was not found.
   /// This is safe to ignore.
   geofenceNotFound,
+
   /// The specified geofence callback was not found.
   /// This can happen for old geofence callback functions that were
   /// moved/renamed. Please re-create those geofences.
   callbackNotFound,
+
   /// The specified geofence callback function signature is invalid.
   /// This can happen if the callback function signature has changed or due to
   /// plugin contract changes.
@@ -106,7 +123,8 @@ class LocationWire {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LocationWire decode(Object result) {
     result as List<Object?>;
@@ -130,8 +148,7 @@ class LocationWire {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class IosGeofenceSettingsWire {
@@ -148,7 +165,8 @@ class IosGeofenceSettingsWire {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IosGeofenceSettingsWire decode(Object result) {
     result as List<Object?>;
@@ -171,8 +189,7 @@ class IosGeofenceSettingsWire {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class AndroidGeofenceSettingsWire {
@@ -183,7 +200,7 @@ class AndroidGeofenceSettingsWire {
     this.notificationResponsivenessMillis,
   });
 
-  List<GeofenceEvent> initialTriggers;
+  List<GeofenceEventWire> initialTriggers;
 
   int? expirationDurationMillis;
 
@@ -201,12 +218,13 @@ class AndroidGeofenceSettingsWire {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static AndroidGeofenceSettingsWire decode(Object result) {
     result as List<Object?>;
     return AndroidGeofenceSettingsWire(
-      initialTriggers: (result[0] as List<Object?>?)!.cast<GeofenceEvent>(),
+      initialTriggers: (result[0] as List<Object?>?)!.cast<GeofenceEventWire>(),
       expirationDurationMillis: result[1] as int?,
       loiteringDelayMillis: result[2]! as int,
       notificationResponsivenessMillis: result[3] as int?,
@@ -216,7 +234,8 @@ class AndroidGeofenceSettingsWire {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! AndroidGeofenceSettingsWire || other.runtimeType != runtimeType) {
+    if (other is! AndroidGeofenceSettingsWire ||
+        other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -227,8 +246,7 @@ class AndroidGeofenceSettingsWire {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class GeofenceWire {
@@ -248,7 +266,7 @@ class GeofenceWire {
 
   double radiusMeters;
 
-  List<GeofenceEvent> triggers;
+  List<GeofenceEventWire> triggers;
 
   IosGeofenceSettingsWire iosSettings;
 
@@ -269,7 +287,8 @@ class GeofenceWire {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static GeofenceWire decode(Object result) {
     result as List<Object?>;
@@ -277,7 +296,7 @@ class GeofenceWire {
       id: result[0]! as String,
       location: result[1]! as LocationWire,
       radiusMeters: result[2]! as double,
-      triggers: (result[3] as List<Object?>?)!.cast<GeofenceEvent>(),
+      triggers: (result[3] as List<Object?>?)!.cast<GeofenceEventWire>(),
       iosSettings: result[4]! as IosGeofenceSettingsWire,
       androidSettings: result[5]! as AndroidGeofenceSettingsWire,
       callbackHandle: result[6]! as int,
@@ -298,8 +317,7 @@ class GeofenceWire {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class ActiveGeofenceWire {
@@ -309,6 +327,7 @@ class ActiveGeofenceWire {
     required this.radiusMeters,
     required this.triggers,
     this.androidSettings,
+    required this.status,
   });
 
   String id;
@@ -317,9 +336,11 @@ class ActiveGeofenceWire {
 
   double radiusMeters;
 
-  List<GeofenceEvent> triggers;
+  List<GeofenceEventWire> triggers;
 
   AndroidGeofenceSettingsWire? androidSettings;
+
+  GeofenceStatusWire status;
 
   List<Object?> _toList() {
     return <Object?>[
@@ -328,11 +349,13 @@ class ActiveGeofenceWire {
       radiusMeters,
       triggers,
       androidSettings,
+      status,
     ];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static ActiveGeofenceWire decode(Object result) {
     result as List<Object?>;
@@ -340,8 +363,9 @@ class ActiveGeofenceWire {
       id: result[0]! as String,
       location: result[1]! as LocationWire,
       radiusMeters: result[2]! as double,
-      triggers: (result[3] as List<Object?>?)!.cast<GeofenceEvent>(),
+      triggers: (result[3] as List<Object?>?)!.cast<GeofenceEventWire>(),
       androidSettings: result[4] as AndroidGeofenceSettingsWire?,
+      status: result[5]! as GeofenceStatusWire,
     );
   }
 
@@ -359,8 +383,7 @@ class ActiveGeofenceWire {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class GeofenceCallbackParamsWire {
@@ -371,9 +394,9 @@ class GeofenceCallbackParamsWire {
     required this.callbackHandle,
   });
 
-  List<ActiveGeofenceWire> geofences;
+  List<ActiveGeofenceWire?> geofences;
 
-  GeofenceEvent event;
+  GeofenceEventWire event;
 
   LocationWire? location;
 
@@ -389,13 +412,14 @@ class GeofenceCallbackParamsWire {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static GeofenceCallbackParamsWire decode(Object result) {
     result as List<Object?>;
     return GeofenceCallbackParamsWire(
-      geofences: (result[0] as List<Object?>?)!.cast<ActiveGeofenceWire>(),
-      event: result[1]! as GeofenceEvent,
+      geofences: (result[0] as List<Object?>?)!.cast<ActiveGeofenceWire?>(),
+      event: result[1]! as GeofenceEventWire,
       location: result[2] as LocationWire?,
       callbackHandle: result[3]! as int,
     );
@@ -404,7 +428,8 @@ class GeofenceCallbackParamsWire {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! GeofenceCallbackParamsWire || other.runtimeType != runtimeType) {
+    if (other is! GeofenceCallbackParamsWire ||
+        other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -415,10 +440,8 @@ class GeofenceCallbackParamsWire {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
-
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -427,29 +450,32 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is GeofenceEvent) {
+    } else if (value is GeofenceEventWire) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    }    else if (value is NativeGeofenceErrorCode) {
+    } else if (value is GeofenceStatusWire) {
       buffer.putUint8(130);
       writeValue(buffer, value.index);
-    }    else if (value is LocationWire) {
+    } else if (value is NativeGeofenceErrorCode) {
       buffer.putUint8(131);
-      writeValue(buffer, value.encode());
-    }    else if (value is IosGeofenceSettingsWire) {
+      writeValue(buffer, value.index);
+    } else if (value is LocationWire) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is AndroidGeofenceSettingsWire) {
+    } else if (value is IosGeofenceSettingsWire) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is GeofenceWire) {
+    } else if (value is AndroidGeofenceSettingsWire) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is ActiveGeofenceWire) {
+    } else if (value is GeofenceWire) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is GeofenceCallbackParamsWire) {
+    } else if (value is ActiveGeofenceWire) {
       buffer.putUint8(136);
+      writeValue(buffer, value.encode());
+    } else if (value is GeofenceCallbackParamsWire) {
+      buffer.putUint8(137);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -459,23 +485,26 @@ class _PigeonCodec extends StandardMessageCodec {
   @override
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
-      case 129: 
+      case 129:
         final int? value = readValue(buffer) as int?;
-        return value == null ? null : GeofenceEvent.values[value];
-      case 130: 
+        return value == null ? null : GeofenceEventWire.values[value];
+      case 130:
+        final int? value = readValue(buffer) as int?;
+        return value == null ? null : GeofenceStatusWire.values[value];
+      case 131:
         final int? value = readValue(buffer) as int?;
         return value == null ? null : NativeGeofenceErrorCode.values[value];
-      case 131: 
+      case 132:
         return LocationWire.decode(readValue(buffer)!);
-      case 132: 
+      case 133:
         return IosGeofenceSettingsWire.decode(readValue(buffer)!);
-      case 133: 
+      case 134:
         return AndroidGeofenceSettingsWire.decode(readValue(buffer)!);
-      case 134: 
+      case 135:
         return GeofenceWire.decode(readValue(buffer)!);
-      case 135: 
+      case 136:
         return ActiveGeofenceWire.decode(readValue(buffer)!);
-      case 136: 
+      case 137:
         return GeofenceCallbackParamsWire.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -487,9 +516,11 @@ class NativeGeofenceApi {
   /// Constructor for [NativeGeofenceApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  NativeGeofenceApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  NativeGeofenceApi(
+      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+        pigeonVar_messageChannelSuffix =
+            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -497,13 +528,16 @@ class NativeGeofenceApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<void> initialize({required int callbackDispatcherHandle}) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.initialize$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.initialize$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[callbackDispatcherHandle]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[callbackDispatcherHandle]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -520,13 +554,16 @@ class NativeGeofenceApi {
   }
 
   Future<void> createGeofence({required GeofenceWire geofence}) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.createGeofence$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.createGeofence$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[geofence]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[geofence]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -543,8 +580,10 @@ class NativeGeofenceApi {
   }
 
   Future<List<String>> getGeofenceIds() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.getGeofenceIds$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.getGeofenceIds$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -571,8 +610,10 @@ class NativeGeofenceApi {
   }
 
   Future<List<ActiveGeofenceWire>> getGeofences() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.getGeofences$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.getGeofences$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -594,18 +635,22 @@ class NativeGeofenceApi {
         message: 'Host platform returned null value for non-null return value.',
       );
     } else {
-      return (pigeonVar_replyList[0] as List<Object?>?)!.cast<ActiveGeofenceWire>();
+      return (pigeonVar_replyList[0] as List<Object?>?)!
+          .cast<ActiveGeofenceWire>();
     }
   }
 
   Future<void> removeGeofenceById({required String id}) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.removeGeofenceById$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.removeGeofenceById$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[id]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[id]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -622,8 +667,10 @@ class NativeGeofenceApi {
   }
 
   Future<void> removeAllGeofences() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.removeAllGeofences$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.removeAllGeofences$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -649,9 +696,11 @@ class NativeGeofenceBackgroundApi {
   /// Constructor for [NativeGeofenceBackgroundApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  NativeGeofenceBackgroundApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  NativeGeofenceBackgroundApi(
+      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+        pigeonVar_messageChannelSuffix =
+            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -659,8 +708,10 @@ class NativeGeofenceBackgroundApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<void> triggerApiInitialized() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceBackgroundApi.triggerApiInitialized$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceBackgroundApi.triggerApiInitialized$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -682,8 +733,10 @@ class NativeGeofenceBackgroundApi {
   }
 
   Future<void> promoteToForeground() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceBackgroundApi.promoteToForeground$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceBackgroundApi.promoteToForeground$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -705,8 +758,10 @@ class NativeGeofenceBackgroundApi {
   }
 
   Future<void> demoteToBackground() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.native_geofence.NativeGeofenceBackgroundApi.demoteToBackground$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.native_geofence.NativeGeofenceBackgroundApi.demoteToBackground$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -733,20 +788,29 @@ abstract class NativeGeofenceTriggerApi {
 
   Future<void> geofenceTriggered(GeofenceCallbackParamsWire params);
 
-  static void setUp(NativeGeofenceTriggerApi? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
-    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  static void setUp(
+    NativeGeofenceTriggerApi? api, {
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) {
+    messageChannelSuffix =
+        messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
     {
-      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-          'dev.flutter.pigeon.native_geofence.NativeGeofenceTriggerApi.geofenceTriggered$messageChannelSuffix', pigeonChannelCodec,
+      final BasicMessageChannel<
+          Object?> pigeonVar_channel = BasicMessageChannel<
+              Object?>(
+          'dev.flutter.pigeon.native_geofence.NativeGeofenceTriggerApi.geofenceTriggered$messageChannelSuffix',
+          pigeonChannelCodec,
           binaryMessenger: binaryMessenger);
       if (api == null) {
         pigeonVar_channel.setMessageHandler(null);
       } else {
         pigeonVar_channel.setMessageHandler((Object? message) async {
           assert(message != null,
-          'Argument for dev.flutter.pigeon.native_geofence.NativeGeofenceTriggerApi.geofenceTriggered was null.');
+              'Argument for dev.flutter.pigeon.native_geofence.NativeGeofenceTriggerApi.geofenceTriggered was null.');
           final List<Object?> args = (message as List<Object?>?)!;
-          final GeofenceCallbackParamsWire? arg_params = (args[0] as GeofenceCallbackParamsWire?);
+          final GeofenceCallbackParamsWire? arg_params =
+              (args[0] as GeofenceCallbackParamsWire?);
           assert(arg_params != null,
               'Argument for dev.flutter.pigeon.native_geofence.NativeGeofenceTriggerApi.geofenceTriggered was null, expected non-null GeofenceCallbackParamsWire.');
           try {
@@ -754,8 +818,9 @@ abstract class NativeGeofenceTriggerApi {
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);
-          }          catch (e) {
-            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          } catch (e) {
+            return wrapResponse(
+                error: PlatformException(code: 'error', message: e.toString()));
           }
         });
       }

@@ -1,5 +1,17 @@
 import 'package:native_geofence/src/generated/platform_bindings.g.dart';
 
+/// Geofencing events.
+///
+/// See the helpful illustration at:
+/// https://developer.android.com/develop/sensors-and-location/location/geofencing
+enum GeofenceEvent {
+  enter,
+  exit,
+
+  /// Not supported on iOS.
+  dwell,
+}
+
 /// A simple representation of a geographic location.
 ///
 /// The latitude and longitude are expressed in decimal degrees.
@@ -135,6 +147,18 @@ class Geofence {
   }
 }
 
+/// The possible states of a geofence.
+enum GeofenceStatus {
+  /// The geofence is waiting to be processed by the OS.
+  pending,
+
+  /// The geofence is actively being monitored.
+  active,
+
+  /// The geofence could not be created, probably due to a permission error.
+  failed,
+}
+
 /// A Geofence that is registered and is actively being tracked.
 ///
 /// This type is a subset of [Geofence] that is returned by the plugin for GET
@@ -157,6 +181,9 @@ class ActiveGeofence {
   /// The types of geofence events to listen for.
   final Set<GeofenceEvent> triggers;
 
+  /// The current status of the geofence.
+  final GeofenceStatus status;
+
   /// Only available on Android.
   ///
   /// The [initialTriggers] field will always be an empty list because Android
@@ -168,6 +195,7 @@ class ActiveGeofence {
     required this.location,
     required this.radiusMeters,
     required this.triggers,
+    required this.status,
     required this.androidSettings,
   });
 
@@ -175,6 +203,7 @@ class ActiveGeofence {
   String toString() {
     return 'ActiveGeofence('
         'id: $id, '
+        'status: $status, '
         'location: $location, '
         'radiusMeters: $radiusMeters, '
         'triggers: [${triggers.map((e) => e.name).join(',')}], '

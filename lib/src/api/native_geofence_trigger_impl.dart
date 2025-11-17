@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'package:native_geofence/src/generated/platform_bindings.g.dart';
+import 'package:native_geofence/src/model/model.dart';
 import 'package:native_geofence/src/model/model_mapper.dart';
 import 'package:native_geofence/src/model/native_geofence_exception.dart';
 import 'package:native_geofence/src/typedefs.dart';

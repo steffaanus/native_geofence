@@ -87,14 +87,26 @@ class FlutterError (
  * See the helpful illustration at:
  * https://developer.android.com/develop/sensors-and-location/location/geofencing
  */
-enum class GeofenceEvent(val raw: Int) {
+enum class GeofenceEventWire(val raw: Int) {
   ENTER(0),
   EXIT(1),
   /** Not supported on iOS. */
   DWELL(2);
 
   companion object {
-    fun ofRaw(raw: Int): GeofenceEvent? {
+    fun ofRaw(raw: Int): GeofenceEventWire? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
+enum class GeofenceStatusWire(val raw: Int) {
+  PENDING(0),
+  ACTIVE(1),
+  FAILED(2);
+
+  companion object {
+    fun ofRaw(raw: Int): GeofenceStatusWire? {
       return values().firstOrNull { it.raw == raw }
     }
   }
@@ -215,7 +227,7 @@ data class IosGeofenceSettingsWire (
 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class AndroidGeofenceSettingsWire (
-  val initialTriggers: List<GeofenceEvent>,
+  val initialTriggers: List<GeofenceEventWire>,
   val expirationDurationMillis: Long? = null,
   val loiteringDelayMillis: Long,
   val notificationResponsivenessMillis: Long? = null
@@ -223,7 +235,7 @@ data class AndroidGeofenceSettingsWire (
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): AndroidGeofenceSettingsWire {
-      val initialTriggers = pigeonVar_list[0] as List<GeofenceEvent>
+      val initialTriggers = pigeonVar_list[0] as List<GeofenceEventWire>
       val expirationDurationMillis = pigeonVar_list[1] as Long?
       val loiteringDelayMillis = pigeonVar_list[2] as Long
       val notificationResponsivenessMillis = pigeonVar_list[3] as Long?
@@ -255,7 +267,7 @@ data class GeofenceWire (
   val id: String,
   val location: LocationWire,
   val radiusMeters: Double,
-  val triggers: List<GeofenceEvent>,
+  val triggers: List<GeofenceEventWire>,
   val iosSettings: IosGeofenceSettingsWire,
   val androidSettings: AndroidGeofenceSettingsWire,
   val callbackHandle: Long
@@ -266,7 +278,7 @@ data class GeofenceWire (
       val id = pigeonVar_list[0] as String
       val location = pigeonVar_list[1] as LocationWire
       val radiusMeters = pigeonVar_list[2] as Double
-      val triggers = pigeonVar_list[3] as List<GeofenceEvent>
+      val triggers = pigeonVar_list[3] as List<GeofenceEventWire>
       val iosSettings = pigeonVar_list[4] as IosGeofenceSettingsWire
       val androidSettings = pigeonVar_list[5] as AndroidGeofenceSettingsWire
       val callbackHandle = pigeonVar_list[6] as Long
@@ -301,8 +313,9 @@ data class ActiveGeofenceWire (
   val id: String,
   val location: LocationWire,
   val radiusMeters: Double,
-  val triggers: List<GeofenceEvent>,
-  val androidSettings: AndroidGeofenceSettingsWire? = null
+  val triggers: List<GeofenceEventWire>,
+  val androidSettings: AndroidGeofenceSettingsWire? = null,
+  val status: GeofenceStatusWire
 )
  {
   companion object {
@@ -310,9 +323,10 @@ data class ActiveGeofenceWire (
       val id = pigeonVar_list[0] as String
       val location = pigeonVar_list[1] as LocationWire
       val radiusMeters = pigeonVar_list[2] as Double
-      val triggers = pigeonVar_list[3] as List<GeofenceEvent>
+      val triggers = pigeonVar_list[3] as List<GeofenceEventWire>
       val androidSettings = pigeonVar_list[4] as AndroidGeofenceSettingsWire?
-      return ActiveGeofenceWire(id, location, radiusMeters, triggers, androidSettings)
+      val status = pigeonVar_list[5] as GeofenceStatusWire
+      return ActiveGeofenceWire(id, location, radiusMeters, triggers, androidSettings, status)
     }
   }
   fun toList(): List<Any?> {
@@ -322,6 +336,7 @@ data class ActiveGeofenceWire (
       radiusMeters,
       triggers,
       androidSettings,
+      status,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -338,16 +353,16 @@ data class ActiveGeofenceWire (
 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class GeofenceCallbackParamsWire (
-  val geofences: List<ActiveGeofenceWire>,
-  val event: GeofenceEvent,
+  val geofences: List<ActiveGeofenceWire?>,
+  val event: GeofenceEventWire,
   val location: LocationWire? = null,
   val callbackHandle: Long
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): GeofenceCallbackParamsWire {
-      val geofences = pigeonVar_list[0] as List<ActiveGeofenceWire>
-      val event = pigeonVar_list[1] as GeofenceEvent
+      val geofences = pigeonVar_list[0] as List<ActiveGeofenceWire?>
+      val event = pigeonVar_list[1] as GeofenceEventWire
       val location = pigeonVar_list[2] as LocationWire?
       val callbackHandle = pigeonVar_list[3] as Long
       return GeofenceCallbackParamsWire(geofences, event, location, callbackHandle)
@@ -377,40 +392,45 @@ private open class FlutterBindingsPigeonCodec : StandardMessageCodec() {
     return when (type) {
       129.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          GeofenceEvent.ofRaw(it.toInt())
+          GeofenceEventWire.ofRaw(it.toInt())
         }
       }
       130.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          NativeGeofenceErrorCode.ofRaw(it.toInt())
+          GeofenceStatusWire.ofRaw(it.toInt())
         }
       }
       131.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          LocationWire.fromList(it)
+        return (readValue(buffer) as Long?)?.let {
+          NativeGeofenceErrorCode.ofRaw(it.toInt())
         }
       }
       132.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          IosGeofenceSettingsWire.fromList(it)
+          LocationWire.fromList(it)
         }
       }
       133.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          AndroidGeofenceSettingsWire.fromList(it)
+          IosGeofenceSettingsWire.fromList(it)
         }
       }
       134.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          GeofenceWire.fromList(it)
+          AndroidGeofenceSettingsWire.fromList(it)
         }
       }
       135.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ActiveGeofenceWire.fromList(it)
+          GeofenceWire.fromList(it)
         }
       }
       136.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          ActiveGeofenceWire.fromList(it)
+        }
+      }
+      137.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           GeofenceCallbackParamsWire.fromList(it)
         }
@@ -420,36 +440,40 @@ private open class FlutterBindingsPigeonCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is GeofenceEvent -> {
+      is GeofenceEventWire -> {
         stream.write(129)
         writeValue(stream, value.raw)
       }
-      is NativeGeofenceErrorCode -> {
+      is GeofenceStatusWire -> {
         stream.write(130)
         writeValue(stream, value.raw)
       }
-      is LocationWire -> {
+      is NativeGeofenceErrorCode -> {
         stream.write(131)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw)
       }
-      is IosGeofenceSettingsWire -> {
+      is LocationWire -> {
         stream.write(132)
         writeValue(stream, value.toList())
       }
-      is AndroidGeofenceSettingsWire -> {
+      is IosGeofenceSettingsWire -> {
         stream.write(133)
         writeValue(stream, value.toList())
       }
-      is GeofenceWire -> {
+      is AndroidGeofenceSettingsWire -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is ActiveGeofenceWire -> {
+      is GeofenceWire -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is GeofenceCallbackParamsWire -> {
+      is ActiveGeofenceWire -> {
         stream.write(136)
+        writeValue(stream, value.toList())
+      }
+      is GeofenceCallbackParamsWire -> {
+        stream.write(137)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)

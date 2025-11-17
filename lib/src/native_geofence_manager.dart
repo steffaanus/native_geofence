@@ -112,8 +112,9 @@ class NativeGeofenceManager {
   /// Throws [NativeGeofenceException].
   Future<List<ActiveGeofence>> getRegisteredGeofences() async => _api
       .getGeofences()
-      .then((value) => value.map((e) => e.fromWire()).toList())
-      .catchError(NativeGeofenceExceptionMapper.catchError<List<Geofence>>);
+      .then((value) => value.map((e) => e!.fromWire()).toList())
+      .catchError(
+          NativeGeofenceExceptionMapper.catchError<List<ActiveGeofence>>);
 
   /// Stop receiving geofence events for a given [Geofence].
   ///

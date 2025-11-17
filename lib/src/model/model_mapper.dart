@@ -4,6 +4,18 @@ import 'package:native_geofence/src/generated/platform_bindings.g.dart';
 import 'package:native_geofence/src/model/model.dart';
 import 'package:native_geofence/src/model/native_geofence_exception.dart';
 
+extension GeofenceEventMapper on GeofenceEvent {
+  GeofenceEventWire toWire() {
+    return GeofenceEventWire.values[index];
+  }
+}
+
+extension GeofenceEventWireMapper on GeofenceEventWire {
+  GeofenceEvent fromWire() {
+    return GeofenceEvent.values[index];
+  }
+}
+
 extension LocationMapper on Location {
   LocationWire toWire() {
     return LocationWire(latitude: latitude, longitude: longitude);
@@ -31,7 +43,7 @@ extension IosGeofenceSettingsWireMapper on IosGeofenceSettingsWire {
 extension AndroidGeofenceSettingsMapper on AndroidGeofenceSettings {
   AndroidGeofenceSettingsWire toWire() {
     return AndroidGeofenceSettingsWire(
-      initialTriggers: initialTriggers.toList(),
+      initialTriggers: initialTriggers.map((e) => e.toWire()).toList(),
       expirationDurationMillis: expiration?.inMilliseconds,
       loiteringDelayMillis: loiteringDelay.inMilliseconds,
       notificationResponsivenessMillis:
@@ -43,7 +55,7 @@ extension AndroidGeofenceSettingsMapper on AndroidGeofenceSettings {
 extension AndroidGeofenceSettingsWireMapper on AndroidGeofenceSettingsWire {
   AndroidGeofenceSettings fromWire() {
     return AndroidGeofenceSettings(
-      initialTriggers: initialTriggers.toSet(),
+      initialTriggers: initialTriggers.map((e) => e.fromWire()).toSet(),
       expiration: expirationDurationMillis != null
           ? Duration(milliseconds: expirationDurationMillis!)
           : null,
@@ -61,35 +73,10 @@ extension GeofenceMapper on Geofence {
       id: id,
       location: location.toWire(),
       radiusMeters: radiusMeters,
-      triggers: triggers.toList(),
+      triggers: triggers.map((e) => e.toWire()).toList(),
       iosSettings: iosSettings.toWire(),
       androidSettings: androidSettings.toWire(),
       callbackHandle: callbackHandle,
-    );
-  }
-}
-
-extension GeofenceWireMapper on GeofenceWire {
-  Geofence fromWire() {
-    return Geofence(
-      id: id,
-      location: location.fromWire(),
-      radiusMeters: radiusMeters,
-      triggers: triggers.toSet(),
-      iosSettings: iosSettings.fromWire(),
-      androidSettings: androidSettings.fromWire(),
-    );
-  }
-}
-
-extension ActiveGeofenceMapper on ActiveGeofence {
-  ActiveGeofenceWire toWire() {
-    return ActiveGeofenceWire(
-      id: id,
-      location: location.toWire(),
-      radiusMeters: radiusMeters,
-      triggers: triggers.toList(),
-      androidSettings: androidSettings?.toWire(),
     );
   }
 }
@@ -100,17 +87,30 @@ extension ActiveGeofenceWireMapper on ActiveGeofenceWire {
       id: id,
       location: location.fromWire(),
       radiusMeters: radiusMeters,
-      triggers: triggers.toSet(),
+      triggers: triggers.map((e) => e.fromWire()).toSet(),
       androidSettings: androidSettings?.fromWire(),
+      status: status.fromWire(),
     );
+  }
+}
+
+extension GeofenceStatusMapper on GeofenceStatus {
+  GeofenceStatusWire toWire() {
+    return GeofenceStatusWire.values[index];
+  }
+}
+
+extension GeofenceStatusWireMapper on GeofenceStatusWire {
+  GeofenceStatus fromWire() {
+    return GeofenceStatus.values[index];
   }
 }
 
 extension GeofenceCallbackParamsWireMapper on GeofenceCallbackParamsWire {
   GeofenceCallbackParams fromWire() {
     return GeofenceCallbackParams(
-      geofences: geofences.map((e) => e.fromWire()).toList(),
-      event: event,
+      geofences: geofences.map((e) => e!.fromWire()).toList(),
+      event: event.fromWire(),
       location: location?.fromWire(),
     );
   }
@@ -122,7 +122,7 @@ extension NativeGeofenceExceptionMapper on NativeGeofenceException {
       code: ex.code == 'channel-error'
           ? NativeGeofenceErrorCode.channelError
           : NativeGeofenceErrorCode.values.firstWhere(
-              (e) => e.index == (int.tryParse(ex.code) ?? 0),
+              (e) => e.name == ex.code,
               orElse: () => NativeGeofenceErrorCode.unknown,
             ),
       message: ex.message,

@@ -136,11 +136,17 @@ func deepHashFlutterBindings(value: Any?, hasher: inout Hasher) {
 ///
 /// See the helpful illustration at:
 /// https://developer.android.com/develop/sensors-and-location/location/geofencing
-enum GeofenceEvent: Int, Codable {
+enum GeofenceEventWire: Int {
   case enter = 0
   case exit = 1
   /// Not supported on iOS.
   case dwell = 2
+}
+
+enum GeofenceStatusWire: Int {
+  case pending = 0
+  case active = 1
+  case failed = 2
 }
 
 /// Errors that can occur when interacting with the native geofence API.
@@ -182,7 +188,7 @@ enum NativeGeofenceErrorCode: Int {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct LocationWire: Hashable, Codable {
+struct LocationWire: Hashable {
   var latitude: Double
   var longitude: Double
 
@@ -211,7 +217,7 @@ struct LocationWire: Hashable, Codable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct IosGeofenceSettingsWire: Hashable, Codable {
+struct IosGeofenceSettingsWire: Hashable {
   var initialTrigger: Bool
 
 
@@ -236,8 +242,8 @@ struct IosGeofenceSettingsWire: Hashable, Codable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct AndroidGeofenceSettingsWire: Hashable, Codable {
-  var initialTriggers: [GeofenceEvent]
+struct AndroidGeofenceSettingsWire: Hashable {
+  var initialTriggers: [GeofenceEventWire]
   var expirationDurationMillis: Int64? = nil
   var loiteringDelayMillis: Int64
   var notificationResponsivenessMillis: Int64? = nil
@@ -245,7 +251,7 @@ struct AndroidGeofenceSettingsWire: Hashable, Codable {
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> AndroidGeofenceSettingsWire? {
-    let initialTriggers = pigeonVar_list[0] as! [GeofenceEvent]
+    let initialTriggers = pigeonVar_list[0] as! [GeofenceEventWire]
     let expirationDurationMillis: Int64? = nilOrValue(pigeonVar_list[1])
     let loiteringDelayMillis = pigeonVar_list[2] as! Int64
     let notificationResponsivenessMillis: Int64? = nilOrValue(pigeonVar_list[3])
@@ -273,11 +279,11 @@ struct AndroidGeofenceSettingsWire: Hashable, Codable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct GeofenceWire: Hashable, Codable {
+struct GeofenceWire: Hashable {
   var id: String
   var location: LocationWire
   var radiusMeters: Double
-  var triggers: [GeofenceEvent]
+  var triggers: [GeofenceEventWire]
   var iosSettings: IosGeofenceSettingsWire
   var androidSettings: AndroidGeofenceSettingsWire
   var callbackHandle: Int64
@@ -288,7 +294,7 @@ struct GeofenceWire: Hashable, Codable {
     let id = pigeonVar_list[0] as! String
     let location = pigeonVar_list[1] as! LocationWire
     let radiusMeters = pigeonVar_list[2] as! Double
-    let triggers = pigeonVar_list[3] as! [GeofenceEvent]
+    let triggers = pigeonVar_list[3] as! [GeofenceEventWire]
     let iosSettings = pigeonVar_list[4] as! IosGeofenceSettingsWire
     let androidSettings = pigeonVar_list[5] as! AndroidGeofenceSettingsWire
     let callbackHandle = pigeonVar_list[6] as! Int64
@@ -322,12 +328,13 @@ struct GeofenceWire: Hashable, Codable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct ActiveGeofenceWire: Hashable, Codable {
+struct ActiveGeofenceWire: Hashable {
   var id: String
   var location: LocationWire
   var radiusMeters: Double
-  var triggers: [GeofenceEvent]
+  var triggers: [GeofenceEventWire]
   var androidSettings: AndroidGeofenceSettingsWire? = nil
+  var status: GeofenceStatusWire
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -335,15 +342,17 @@ struct ActiveGeofenceWire: Hashable, Codable {
     let id = pigeonVar_list[0] as! String
     let location = pigeonVar_list[1] as! LocationWire
     let radiusMeters = pigeonVar_list[2] as! Double
-    let triggers = pigeonVar_list[3] as! [GeofenceEvent]
+    let triggers = pigeonVar_list[3] as! [GeofenceEventWire]
     let androidSettings: AndroidGeofenceSettingsWire? = nilOrValue(pigeonVar_list[4])
+    let status = pigeonVar_list[5] as! GeofenceStatusWire
 
     return ActiveGeofenceWire(
       id: id,
       location: location,
       radiusMeters: radiusMeters,
       triggers: triggers,
-      androidSettings: androidSettings
+      androidSettings: androidSettings,
+      status: status
     )
   }
   func toList() -> [Any?] {
@@ -353,6 +362,7 @@ struct ActiveGeofenceWire: Hashable, Codable {
       radiusMeters,
       triggers,
       androidSettings,
+      status,
     ]
   }
   static func == (lhs: ActiveGeofenceWire, rhs: ActiveGeofenceWire) -> Bool {
@@ -363,17 +373,17 @@ struct ActiveGeofenceWire: Hashable, Codable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct GeofenceCallbackParamsWire: Hashable, Codable {
-  var geofences: [ActiveGeofenceWire]
-  var event: GeofenceEvent
+struct GeofenceCallbackParamsWire: Hashable {
+  var geofences: [ActiveGeofenceWire?]
+  var event: GeofenceEventWire
   var location: LocationWire? = nil
   var callbackHandle: Int64
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> GeofenceCallbackParamsWire? {
-    let geofences = pigeonVar_list[0] as! [ActiveGeofenceWire]
-    let event = pigeonVar_list[1] as! GeofenceEvent
+    let geofences = pigeonVar_list[0] as! [ActiveGeofenceWire?]
+    let event = pigeonVar_list[1] as! GeofenceEventWire
     let location: LocationWire? = nilOrValue(pigeonVar_list[2])
     let callbackHandle = pigeonVar_list[3] as! Int64
 
@@ -405,26 +415,32 @@ private class FlutterBindingsPigeonCodecReader: FlutterStandardReader {
     case 129:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return GeofenceEvent(rawValue: enumResultAsInt)
+        return GeofenceEventWire(rawValue: enumResultAsInt)
       }
       return nil
     case 130:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return NativeGeofenceErrorCode(rawValue: enumResultAsInt)
+        return GeofenceStatusWire(rawValue: enumResultAsInt)
       }
       return nil
     case 131:
-      return LocationWire.fromList(self.readValue() as! [Any?])
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return NativeGeofenceErrorCode(rawValue: enumResultAsInt)
+      }
+      return nil
     case 132:
-      return IosGeofenceSettingsWire.fromList(self.readValue() as! [Any?])
+      return LocationWire.fromList(self.readValue() as! [Any?])
     case 133:
-      return AndroidGeofenceSettingsWire.fromList(self.readValue() as! [Any?])
+      return IosGeofenceSettingsWire.fromList(self.readValue() as! [Any?])
     case 134:
-      return GeofenceWire.fromList(self.readValue() as! [Any?])
+      return AndroidGeofenceSettingsWire.fromList(self.readValue() as! [Any?])
     case 135:
-      return ActiveGeofenceWire.fromList(self.readValue() as! [Any?])
+      return GeofenceWire.fromList(self.readValue() as! [Any?])
     case 136:
+      return ActiveGeofenceWire.fromList(self.readValue() as! [Any?])
+    case 137:
       return GeofenceCallbackParamsWire.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -434,29 +450,32 @@ private class FlutterBindingsPigeonCodecReader: FlutterStandardReader {
 
 private class FlutterBindingsPigeonCodecWriter: FlutterStandardWriter {
   override func writeValue(_ value: Any) {
-    if let value = value as? GeofenceEvent {
+    if let value = value as? GeofenceEventWire {
       super.writeByte(129)
       super.writeValue(value.rawValue)
-    } else if let value = value as? NativeGeofenceErrorCode {
+    } else if let value = value as? GeofenceStatusWire {
       super.writeByte(130)
       super.writeValue(value.rawValue)
-    } else if let value = value as? LocationWire {
+    } else if let value = value as? NativeGeofenceErrorCode {
       super.writeByte(131)
-      super.writeValue(value.toList())
-    } else if let value = value as? IosGeofenceSettingsWire {
+      super.writeValue(value.rawValue)
+    } else if let value = value as? LocationWire {
       super.writeByte(132)
       super.writeValue(value.toList())
-    } else if let value = value as? AndroidGeofenceSettingsWire {
+    } else if let value = value as? IosGeofenceSettingsWire {
       super.writeByte(133)
       super.writeValue(value.toList())
-    } else if let value = value as? GeofenceWire {
+    } else if let value = value as? AndroidGeofenceSettingsWire {
       super.writeByte(134)
       super.writeValue(value.toList())
-    } else if let value = value as? ActiveGeofenceWire {
+    } else if let value = value as? GeofenceWire {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? GeofenceCallbackParamsWire {
+    } else if let value = value as? ActiveGeofenceWire {
       super.writeByte(136)
+      super.writeValue(value.toList())
+    } else if let value = value as? GeofenceCallbackParamsWire {
+      super.writeByte(137)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
