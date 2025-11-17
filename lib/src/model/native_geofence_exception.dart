@@ -7,7 +7,8 @@ class NativeGeofenceException implements Exception {
 
   const NativeGeofenceException(this.code, {this.message, this.details});
 
-  factory NativeGeofenceException.internal({String? message, dynamic details}) =>
+  factory NativeGeofenceException.internal(
+          {String? message, dynamic details}) =>
       NativeGeofenceException(
         NativeGeofenceErrorCode.pluginInternal,
         message: message,
@@ -24,7 +25,8 @@ class NativeGeofenceException implements Exception {
 }
 
 class NativeGeofenceExceptionMapper {
-  static NativeGeofenceException fromError(Object error, StackTrace stackTrace) {
+  static NativeGeofenceException fromError(
+      Object error, StackTrace stackTrace) {
     if (error is NativeGeofenceException) {
       return error;
     }

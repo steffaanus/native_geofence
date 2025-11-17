@@ -34,8 +34,7 @@ class CreateGeofenceState extends State<CreateGeofence> {
         androidSettings: AndroidGeofenceSettings(
           initialTriggers: [GeofenceEvent.enter],
           loiteringDelayMillis: 1000,
-        ),
-        callbackHandle: 0);
+        ));
     _updateRegisteredGeofences();
   }
 
@@ -52,18 +51,15 @@ class CreateGeofenceState extends State<CreateGeofence> {
                   style: Theme.of(context).textTheme.headlineSmall),
               SizedBox(height: 16),
               TextFormField(
-                decoration: InputDecoration(labelText: 'ID'),
-                initialValue: data.id,
-                onChanged: (String value) =>
-                    data = Geofence(
-                        id: value,
-                        location: data.location,
-                        radiusMeters: data.radiusMeters,
-                        triggers: data.triggers,
-                        iosSettings: data.iosSettings,
-                        androidSettings: data.androidSettings,
-                        callbackHandle: data.callbackHandle)
-              ),
+                  decoration: InputDecoration(labelText: 'ID'),
+                  initialValue: data.id,
+                  onChanged: (String value) => data = Geofence(
+                      id: value,
+                      location: data.location,
+                      radiusMeters: data.radiusMeters,
+                      triggers: data.triggers,
+                      iosSettings: data.iosSettings,
+                      androidSettings: data.androidSettings)),
               SizedBox(height: 16),
               TextFormField(
                 decoration: InputDecoration(labelText: 'Latitude'),
@@ -77,8 +73,7 @@ class CreateGeofenceState extends State<CreateGeofence> {
                       radiusMeters: data.radiusMeters,
                       triggers: data.triggers,
                       iosSettings: data.iosSettings,
-                      androidSettings: data.androidSettings,
-                      callbackHandle: data.callbackHandle);
+                      androidSettings: data.androidSettings);
                 },
               ),
               SizedBox(height: 10),
@@ -94,8 +89,7 @@ class CreateGeofenceState extends State<CreateGeofence> {
                       radiusMeters: data.radiusMeters,
                       triggers: data.triggers,
                       iosSettings: data.iosSettings,
-                      androidSettings: data.androidSettings,
-                      callbackHandle: data.callbackHandle);
+                      androidSettings: data.androidSettings);
                 },
               ),
               SizedBox(height: 16),
@@ -109,8 +103,7 @@ class CreateGeofenceState extends State<CreateGeofence> {
                       radiusMeters: double.parse(value),
                       triggers: data.triggers,
                       iosSettings: data.iosSettings,
-                      androidSettings: data.androidSettings,
-                      callbackHandle: data.callbackHandle);
+                      androidSettings: data.androidSettings);
                 },
               ),
               SizedBox(height: 22),
@@ -168,4 +161,3 @@ Future<bool> _checkPermissions() async {
       backgroundLocationPerm.isGranted &&
       notificationPerm.isGranted;
 }
-

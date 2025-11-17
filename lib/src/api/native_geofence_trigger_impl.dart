@@ -23,12 +23,10 @@ class NativeGeofenceTriggerImpl implements NativeGeofenceTriggerApi {
     final Function? callback = PluginUtilities.getCallbackFromHandle(
         CallbackHandle.fromRawHandle(params.callbackHandle));
     if (callback == null) {
-      throw NativeGeofenceException(
-          NativeGeofenceErrorCode.callbackNotFound);
+      throw NativeGeofenceException(NativeGeofenceErrorCode.callbackNotFound);
     }
     if (callback is! GeofenceCallback) {
-      throw NativeGeofenceException(
-          NativeGeofenceErrorCode.callbackInvalid,
+      throw NativeGeofenceException(NativeGeofenceErrorCode.callbackInvalid,
           message: 'Invalid callback type: ${callback.runtimeType.toString()}',
           details: 'Expected: GeofenceCallback');
     }

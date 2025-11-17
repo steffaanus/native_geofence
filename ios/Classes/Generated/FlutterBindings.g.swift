@@ -286,7 +286,6 @@ struct Geofence: Hashable {
   var triggers: [GeofenceEvent]
   var iosSettings: IosGeofenceSettings
   var androidSettings: AndroidGeofenceSettings
-  var callbackHandle: Int64
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -297,7 +296,6 @@ struct Geofence: Hashable {
     let triggers = pigeonVar_list[3] as! [GeofenceEvent]
     let iosSettings = pigeonVar_list[4] as! IosGeofenceSettings
     let androidSettings = pigeonVar_list[5] as! AndroidGeofenceSettings
-    let callbackHandle = pigeonVar_list[6] as! Int64
 
     return Geofence(
       id: id,
@@ -305,8 +303,7 @@ struct Geofence: Hashable {
       radiusMeters: radiusMeters,
       triggers: triggers,
       iosSettings: iosSettings,
-      androidSettings: androidSettings,
-      callbackHandle: callbackHandle
+      androidSettings: androidSettings
     )
   }
   func toList() -> [Any?] {
@@ -317,7 +314,6 @@ struct Geofence: Hashable {
       triggers,
       iosSettings,
       androidSettings,
-      callbackHandle,
     ]
   }
   static func == (lhs: Geofence, rhs: Geofence) -> Bool {

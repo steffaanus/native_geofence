@@ -256,7 +256,6 @@ class Geofence {
     required this.triggers,
     required this.iosSettings,
     required this.androidSettings,
-    required this.callbackHandle,
   });
 
   String id;
@@ -271,8 +270,6 @@ class Geofence {
 
   AndroidGeofenceSettings androidSettings;
 
-  int callbackHandle;
-
   List<Object?> _toList() {
     return <Object?>[
       id,
@@ -281,7 +278,6 @@ class Geofence {
       triggers,
       iosSettings,
       androidSettings,
-      callbackHandle,
     ];
   }
 
@@ -298,7 +294,6 @@ class Geofence {
       triggers: (result[3] as List<Object?>?)!.cast<GeofenceEvent>(),
       iosSettings: result[4]! as IosGeofenceSettings,
       androidSettings: result[5]! as AndroidGeofenceSettings,
-      callbackHandle: result[6]! as int,
     );
   }
 

@@ -4,11 +4,11 @@ import 'package:pigeon/pigeon.dart';
 // dart run pigeon --input pigeons/native_geofence_api.dart && dart format .
 
 @ConfigurePigeon(PigeonOptions(
-  dartOut: 'lib/src/generated/platform_bindings.g.dart',
+  dartOut: 'lib/src/generated/native_geofence_api.g.dart',
   dartPackageName: 'native_geofence',
-  swiftOut: 'ios/Classes/Generated/FlutterBindings.g.swift',
+  swiftOut: 'ios/Classes/generated/NativeGeofenceApi.g.swift',
   kotlinOut:
-      'android/src/main/kotlin/com/steffaanus/native_geofence/generated/FlutterBindings.g.kt',
+      'android/src/main/kotlin/com/steffaanus/native_geofence/generated/NativeGeofenceApi.g.kt',
   kotlinOptions:
       KotlinOptions(package: 'com.steffaanus.native_geofence.generated'),
 ))
@@ -67,17 +67,14 @@ class Geofence {
   final List<GeofenceEvent> triggers;
   final IosGeofenceSettings iosSettings;
   final AndroidGeofenceSettings androidSettings;
-  final int callbackHandle;
 
-  Geofence({
-    required this.id,
-    required this.location,
-    required this.radiusMeters,
-    required this.triggers,
-    required this.iosSettings,
-    required this.androidSettings,
-    required this.callbackHandle,
-  });
+  Geofence(
+      {required this.id,
+      required this.location,
+      required this.radiusMeters,
+      required this.triggers,
+      required this.iosSettings,
+      required this.androidSettings});
 }
 
 class ActiveGeofence {
