@@ -1,3 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.steffaanus.native_geofence">
+    package="com.steffaanus.native_geofence">
+
+    <!-- Makes it clear that the plugin requires fine location. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Makes it clear that the plugin requires background location for geofencing. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Essential declaration of the BroadcastReceiver. -->
+    <application>
+        <receiver
+            android:name="com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true" />
+    </application>
 </manifest>
