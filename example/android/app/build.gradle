@@ -28,7 +28,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace 'com.Steffaanus.native_geofence_example'
+    namespace 'com.steffaanus.native_geofence_example'
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion "26.1.10909125"
 
@@ -49,7 +49,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.Steffaanus.native_geofence_example"
+        applicationId "com.steffaanus.native_geofence_example"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()

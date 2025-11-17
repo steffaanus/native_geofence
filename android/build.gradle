@@ -1,4 +1,4 @@
-group 'com.Steffaanus.native_geofence'
+group 'com.steffaanus.native_geofence'
 version '1.0-SNAPSHOT'
 
 buildscript {
@@ -28,7 +28,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlinx-serialization'
 
 android {
-    namespace 'com.Steffaanus.native_geofence'
+    namespace 'com.steffaanus.native_geofence'
 
     compileSdk 34
 

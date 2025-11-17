@@ -25,7 +25,7 @@
 
 ## 1.0.7
 
-* Fixes a bug with Android 30 and older. [#9](https://github.com/Steffaanus/native_geofence/issues/9)
+* Fixes a bug with Android 30 and older. [#9](https://github.com/steffaanus/native_geofence/issues/9)
 * Improve documentation.
 
 ## 1.0.6
