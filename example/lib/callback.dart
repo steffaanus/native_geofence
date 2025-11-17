@@ -7,7 +7,6 @@ import 'package:native_geofence/native_geofence.dart';
 import 'package:native_geofence_example/notifications_repository.dart';
 
 @pragma('vm:entry-point')
-
 Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
   debugPrint('geofenceTriggered params: $params');
   final SendPort? send =

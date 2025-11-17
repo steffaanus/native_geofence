@@ -13,7 +13,7 @@ import io.flutter.plugin.common.StandardMethodCodec
 import io.flutter.plugin.common.StandardMessageCodec
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
-private object FlutterBindingsPigeonUtils {
+private object NativeGeofenceApiPigeonUtils {
 
   fun createConnectionError(channelName: String): FlutterError {
     return FlutterError("channel-error",  "Unable to establish connection on channel: '$channelName'.", "")  }
@@ -192,7 +192,7 @@ data class Location (
     if (this === other) {
       return true
     }
-    return FlutterBindingsPigeonUtils.deepEquals(toList(), other.toList())  }
+    return NativeGeofenceApiPigeonUtils.deepEquals(toList(), other.toList())  }
 
   override fun hashCode(): Int = toList().hashCode()
 }
@@ -220,7 +220,7 @@ data class IosGeofenceSettings (
     if (this === other) {
       return true
     }
-    return FlutterBindingsPigeonUtils.deepEquals(toList(), other.toList())  }
+    return NativeGeofenceApiPigeonUtils.deepEquals(toList(), other.toList())  }
 
   override fun hashCode(): Int = toList().hashCode()
 }
@@ -257,7 +257,7 @@ data class AndroidGeofenceSettings (
     if (this === other) {
       return true
     }
-    return FlutterBindingsPigeonUtils.deepEquals(toList(), other.toList())  }
+    return NativeGeofenceApiPigeonUtils.deepEquals(toList(), other.toList())  }
 
   override fun hashCode(): Int = toList().hashCode()
 }
@@ -300,7 +300,7 @@ data class Geofence (
     if (this === other) {
       return true
     }
-    return FlutterBindingsPigeonUtils.deepEquals(toList(), other.toList())  }
+    return NativeGeofenceApiPigeonUtils.deepEquals(toList(), other.toList())  }
 
   override fun hashCode(): Int = toList().hashCode()
 }
@@ -343,7 +343,7 @@ data class ActiveGeofence (
     if (this === other) {
       return true
     }
-    return FlutterBindingsPigeonUtils.deepEquals(toList(), other.toList())  }
+    return NativeGeofenceApiPigeonUtils.deepEquals(toList(), other.toList())  }
 
   override fun hashCode(): Int = toList().hashCode()
 }
@@ -380,11 +380,11 @@ data class GeofenceCallbackParams (
     if (this === other) {
       return true
     }
-    return FlutterBindingsPigeonUtils.deepEquals(toList(), other.toList())  }
+    return NativeGeofenceApiPigeonUtils.deepEquals(toList(), other.toList())  }
 
   override fun hashCode(): Int = toList().hashCode()
 }
-private open class FlutterBindingsPigeonCodec : StandardMessageCodec() {
+private open class NativeGeofenceApiPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
@@ -491,7 +491,7 @@ interface NativeGeofenceApi {
   companion object {
     /** The codec used by NativeGeofenceApi. */
     val codec: MessageCodec<Any?> by lazy {
-      FlutterBindingsPigeonCodec()
+      NativeGeofenceApiPigeonCodec()
     }
     /** Sets up an instance of `NativeGeofenceApi` to handle messages through the `binaryMessenger`. */
     @JvmOverloads
@@ -507,7 +507,7 @@ interface NativeGeofenceApi {
               api.initialize(callbackDispatcherHandleArg)
               listOf(null)
             } catch (exception: Throwable) {
-              FlutterBindingsPigeonUtils.wrapError(exception)
+              NativeGeofenceApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
           }
@@ -524,9 +524,9 @@ interface NativeGeofenceApi {
             api.createGeofence(geofenceArg) { result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(FlutterBindingsPigeonUtils.wrapError(error))
+                reply.reply(NativeGeofenceApiPigeonUtils.wrapError(error))
               } else {
-                reply.reply(FlutterBindingsPigeonUtils.wrapResult(null))
+                reply.reply(NativeGeofenceApiPigeonUtils.wrapResult(null))
               }
             }
           }
@@ -541,7 +541,7 @@ interface NativeGeofenceApi {
             val wrapped: List<Any?> = try {
               listOf(api.getGeofenceIds())
             } catch (exception: Throwable) {
-              FlutterBindingsPigeonUtils.wrapError(exception)
+              NativeGeofenceApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
           }
@@ -556,7 +556,7 @@ interface NativeGeofenceApi {
             val wrapped: List<Any?> = try {
               listOf(api.getGeofences())
             } catch (exception: Throwable) {
-              FlutterBindingsPigeonUtils.wrapError(exception)
+              NativeGeofenceApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
           }
@@ -573,9 +573,9 @@ interface NativeGeofenceApi {
             api.removeGeofenceById(idArg) { result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(FlutterBindingsPigeonUtils.wrapError(error))
+                reply.reply(NativeGeofenceApiPigeonUtils.wrapError(error))
               } else {
-                reply.reply(FlutterBindingsPigeonUtils.wrapResult(null))
+                reply.reply(NativeGeofenceApiPigeonUtils.wrapResult(null))
               }
             }
           }
@@ -590,9 +590,9 @@ interface NativeGeofenceApi {
             api.removeAllGeofences{ result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(FlutterBindingsPigeonUtils.wrapError(error))
+                reply.reply(NativeGeofenceApiPigeonUtils.wrapError(error))
               } else {
-                reply.reply(FlutterBindingsPigeonUtils.wrapResult(null))
+                reply.reply(NativeGeofenceApiPigeonUtils.wrapResult(null))
               }
             }
           }
@@ -612,7 +612,7 @@ interface NativeGeofenceBackgroundApi {
   companion object {
     /** The codec used by NativeGeofenceBackgroundApi. */
     val codec: MessageCodec<Any?> by lazy {
-      FlutterBindingsPigeonCodec()
+      NativeGeofenceApiPigeonCodec()
     }
     /** Sets up an instance of `NativeGeofenceBackgroundApi` to handle messages through the `binaryMessenger`. */
     @JvmOverloads
@@ -626,7 +626,7 @@ interface NativeGeofenceBackgroundApi {
               api.triggerApiInitialized()
               listOf(null)
             } catch (exception: Throwable) {
-              FlutterBindingsPigeonUtils.wrapError(exception)
+              NativeGeofenceApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
           }
@@ -642,7 +642,7 @@ interface NativeGeofenceBackgroundApi {
               api.promoteToForeground()
               listOf(null)
             } catch (exception: Throwable) {
-              FlutterBindingsPigeonUtils.wrapError(exception)
+              NativeGeofenceApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
           }
@@ -658,7 +658,7 @@ interface NativeGeofenceBackgroundApi {
               api.demoteToBackground()
               listOf(null)
             } catch (exception: Throwable) {
-              FlutterBindingsPigeonUtils.wrapError(exception)
+              NativeGeofenceApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
           }
@@ -674,7 +674,7 @@ class NativeGeofenceTriggerApi(private val binaryMessenger: BinaryMessenger, pri
   companion object {
     /** The codec used by NativeGeofenceTriggerApi. */
     val codec: MessageCodec<Any?> by lazy {
-      FlutterBindingsPigeonCodec()
+      NativeGeofenceApiPigeonCodec()
     }
   }
   fun geofenceTriggered(paramsArg: GeofenceCallbackParams, callback: (Result<Unit>) -> Unit)
@@ -690,7 +690,7 @@ class NativeGeofenceTriggerApi(private val binaryMessenger: BinaryMessenger, pri
           callback(Result.success(Unit))
         }
       } else {
-        callback(Result.failure(FlutterBindingsPigeonUtils.createConnectionError(channelName)))
+        callback(Result.failure(NativeGeofenceApiPigeonUtils.createConnectionError(channelName)))
       } 
     }
   }
