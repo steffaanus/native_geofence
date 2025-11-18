@@ -2,9 +2,9 @@ package com.steffaanus.native_geofence.model
 
 import com.steffaanus.native_geofence.generated.GeofenceEvent
 import com.steffaanus.native_geofence.generated.Geofence
-import com.steffaanus.native_geofence.generated.GeofenceStatus
 import com.steffaanus.native_geofence.generated.ActiveGeofence
 import kotlinx.serialization.Serializable
+import com.steffaanus.native_geofence.generated.GeofenceStatus as ApiGeofenceStatus
 
 @Serializable
 class GeofenceStorage(
@@ -15,7 +15,7 @@ class GeofenceStorage(
     val iosSettings: IosGeofenceSettingsStorage,
     val androidSettings: AndroidGeofenceSettingsStorage,
     val callbackHandle: Long,
-    var status: GeofenceStatus = GeofenceStatus.PENDING,
+    var status: ApiGeofenceStatus = ApiGeofenceStatus.PENDING,
 ) {
     companion object {
         fun fromApi(e: Geofence): GeofenceStorage {
@@ -27,7 +27,7 @@ class GeofenceStorage(
                 IosGeofenceSettingsStorage.fromApi(e.iosSettings),
                 AndroidGeofenceSettingsStorage.fromApi(e.androidSettings),
                 e.callbackHandle,
-                GeofenceStatus.PENDING,
+                ApiGeofenceStatus.PENDING,
             )
         }
     }

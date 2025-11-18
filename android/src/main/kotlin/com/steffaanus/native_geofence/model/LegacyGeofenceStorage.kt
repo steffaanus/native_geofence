@@ -1,30 +1,28 @@
 package com.steffaanus.native_geofence.model
 
-import com.steffaanus.native_geofence.generated.AndroidGeofenceSettings
 import com.steffaanus.native_geofence.generated.Geofence
 import com.steffaanus.native_geofence.generated.GeofenceEvent
-import com.steffaanus.native_geofence.generated.IosGeofenceSettings
-import com.steffaanus.native_geofence.generated.Location
 import kotlinx.serialization.Serializable
+import com.steffaanus.native_geofence.generated.GeofenceStatus as ApiGeofenceStatus
 
 @Serializable
 data class LegacyGeofenceStorage(
     val id: String,
-    val location: Location,
+    val location: LocationStorage,
     val radiusMeters: Double,
     val triggers: List<GeofenceEvent>,
-    val androidSettings: AndroidGeofenceSettings,
-    val iosSettings: IosGeofenceSettings,
+    val androidSettings: AndroidGeofenceSettingsStorage,
+    val iosSettings: IosGeofenceSettingsStorage,
     val callbackHandle: Long,
 ) {
     fun toGeofence(): Geofence {
         return Geofence(
             id = id,
-            location = location,
+            location = location.toApi(),
             radiusMeters = radiusMeters,
             triggers = triggers,
-            androidSettings = androidSettings,
-            iosSettings = iosSettings,
+            androidSettings = androidSettings.toApi(),
+            iosSettings = iosSettings.toApi(),
             callbackHandle = callbackHandle,
         )
     }
@@ -38,7 +36,7 @@ data class LegacyGeofenceStorage(
             androidSettings = androidSettings,
             iosSettings = iosSettings,
             callbackHandle = callbackHandle,
-            status = GeofenceStatus.ACTIVE,
+            status = ApiGeofenceStatus.ACTIVE,
         )
     }
 }
