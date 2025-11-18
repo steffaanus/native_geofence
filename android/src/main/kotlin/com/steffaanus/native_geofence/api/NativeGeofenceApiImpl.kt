@@ -231,7 +231,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
 
 private fun Geofence.toGeofence(context: Context): com.google.android.gms.location.Geofence {
     val broadcastIntent = Intent(context, NativeGeofenceBroadcastReceiver::class.java)
-    broadcastIntent.putExtra(Constants.CALLBACK_HANDLE_KEY, id)
+    broadcastIntent.putExtra(Constants.CALLBACK_HANDLE_KEY, callbackHandle)
 
     return com.google.android.gms.location.Geofence.Builder()
         .setRequestId(id)

@@ -30,7 +30,7 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             Log.e(TAG, "GeofencingEvent is null.")
             return
         }
-        val geofenceCallbackParams = getGeofenceCallbackParams(context, geofencingEvent) ?: return
+        val geofenceCallbackParams = getGeofenceCallbackParams(context, geofencingEvent, intent) ?: return
         val jsonData = Json.encodeToString(geofenceCallbackParams)
         val workRequest = OneTimeWorkRequestBuilder<NativeGeofenceBackgroundWorker>()
             .setInputData(Data.Builder().putString(Constants.WORKER_PAYLOAD_KEY, jsonData).build())
@@ -49,7 +49,8 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
 
     private fun getGeofenceCallbackParams(
         context: Context,
-        geofencingEvent: GeofencingEvent
+        geofencingEvent: GeofencingEvent,
+        intent: Intent
     ): GeofenceCallbackParams? {
         if (geofencingEvent.hasError()) {
             Log.e(TAG, "GeofencingEvent has error Code=${geofencingEvent.errorCode}.")
@@ -84,10 +85,7 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             Log.w(TAG, "No triggering location found.")
         }
 
-        val callbackHandle = context.getSharedPreferences(
-            Constants.SHARED_PREFERENCES_KEY,
-            Context.MODE_PRIVATE
-        ).getLong(Constants.CALLBACK_DISPATCHER_HANDLE_KEY, 0L)
+        val callbackHandle = intent.getLongExtra(Constants.CALLBACK_HANDLE_KEY, 0L)
 
         return GeofenceCallbackParams(
             geofences = listOf(geofence.toActiveGeofence()),

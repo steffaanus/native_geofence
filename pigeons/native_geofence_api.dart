@@ -9,10 +9,9 @@ import 'package:pigeon/pigeon.dart';
   swiftOut: 'ios/Classes/generated/NativeGeofenceApi.g.swift',
   kotlinOut:
       'android/src/main/kotlin/com/steffaanus/native_geofence/generated/NativeGeofenceApi.g.kt',
-  kotlinOptions: KotlinOptions(
-   package: 'com.steffaanus.native_geofence.generated'
-  ),
- ))
+  kotlinOptions:
+      KotlinOptions(package: 'com.steffaanus.native_geofence.generated'),
+))
 
 /// Geofencing events.
 ///
@@ -68,6 +67,7 @@ class Geofence {
   final List<GeofenceEvent> triggers;
   final IosGeofenceSettings iosSettings;
   final AndroidGeofenceSettings androidSettings;
+  final int callbackHandle;
 
   Geofence(
       {required this.id,
@@ -75,7 +75,8 @@ class Geofence {
       required this.radiusMeters,
       required this.triggers,
       required this.iosSettings,
-      required this.androidSettings});
+      required this.androidSettings,
+      required this.callbackHandle});
 }
 
 class ActiveGeofence {

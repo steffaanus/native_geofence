@@ -13,7 +13,6 @@ import io.flutter.plugin.common.StandardMethodCodec
 import io.flutter.plugin.common.StandardMessageCodec
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
-import kotlinx.serialization.Serializable
 private object NativeGeofenceApiPigeonUtils {
 
   fun createConnectionError(channelName: String): FlutterError {
@@ -88,7 +87,6 @@ class FlutterError (
  * See the helpful illustration at:
  * https://developer.android.com/develop/sensors-and-location/location/geofencing
  */
-@Serializable
 enum class GeofenceEvent(val raw: Int) {
   ENTER(0),
   EXIT(1),
@@ -102,7 +100,6 @@ enum class GeofenceEvent(val raw: Int) {
   }
 }
 
-@Serializable
 enum class GeofenceStatus(val raw: Int) {
   PENDING(0),
   ACTIVE(1),
@@ -170,7 +167,6 @@ enum class NativeGeofenceErrorCode(val raw: Int) {
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-@Serializable
 data class Location (
   val latitude: Double,
   val longitude: Double
@@ -202,7 +198,6 @@ data class Location (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-@Serializable
 data class IosGeofenceSettings (
   val initialTrigger: Boolean
 )
@@ -231,7 +226,6 @@ data class IosGeofenceSettings (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-@Serializable
 data class AndroidGeofenceSettings (
   val initialTriggers: List<GeofenceEvent>,
   val expirationDurationMillis: Long? = null,
@@ -269,14 +263,14 @@ data class AndroidGeofenceSettings (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-@Serializable
 data class Geofence (
   val id: String,
   val location: Location,
   val radiusMeters: Double,
   val triggers: List<GeofenceEvent>,
   val iosSettings: IosGeofenceSettings,
-  val androidSettings: AndroidGeofenceSettings
+  val androidSettings: AndroidGeofenceSettings,
+  val callbackHandle: Long
 )
  {
   companion object {
@@ -287,7 +281,8 @@ data class Geofence (
       val triggers = pigeonVar_list[3] as List<GeofenceEvent>
       val iosSettings = pigeonVar_list[4] as IosGeofenceSettings
       val androidSettings = pigeonVar_list[5] as AndroidGeofenceSettings
-      return Geofence(id, location, radiusMeters, triggers, iosSettings, androidSettings)
+      val callbackHandle = pigeonVar_list[6] as Long
+      return Geofence(id, location, radiusMeters, triggers, iosSettings, androidSettings, callbackHandle)
     }
   }
   fun toList(): List<Any?> {
@@ -298,6 +293,7 @@ data class Geofence (
       triggers,
       iosSettings,
       androidSettings,
+      callbackHandle,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -313,7 +309,6 @@ data class Geofence (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-@Serializable
 data class ActiveGeofence (
   val id: String,
   val location: Location,
@@ -357,7 +352,6 @@ data class ActiveGeofence (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-@Serializable
 data class GeofenceCallbackParams (
   val geofences: List<ActiveGeofence?>,
   val event: GeofenceEvent,
