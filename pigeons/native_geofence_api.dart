@@ -6,7 +6,7 @@ import 'package:pigeon/pigeon.dart';
 @ConfigurePigeon(PigeonOptions(
   dartOut: 'lib/src/generated/native_geofence_api.g.dart',
   dartPackageName: 'native_geofence',
-  swiftOut: 'ios/Classes/generated/NativeGeofenceApi.g.swift',
+  swiftOut: 'ios/Classes/Generated/NativeGeofenceApi.g.swift',
   kotlinOut:
       'android/src/main/kotlin/com/steffaanus/native_geofence/generated/NativeGeofenceApi.g.kt',
   kotlinOptions:

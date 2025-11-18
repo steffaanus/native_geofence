@@ -1,20 +1,22 @@
 import CoreLocation
 
 class ActiveGeofenceWires {
-    static func fromGeofenceWire(_ geofence: GeofenceWire) -> ActiveGeofenceWire {
-        return ActiveGeofenceWire(
+    static func fromGeofence(_ geofence: Geofence) -> ActiveGeofence {
+        return ActiveGeofence(
             id: geofence.id,
             location: geofence.location,
             radiusMeters: geofence.radiusMeters,
-            triggers: geofence.triggers
+            triggers: geofence.triggers,
+            androidSettings: geofence.androidSettings,
+            status: .active
         )
     }
 
-    static func fromRegion(_ region: CLRegion) -> ActiveGeofenceWire? {
+    static func fromRegion(_ region: CLRegion) -> ActiveGeofence? {
         guard let circularRegion = region as? CLCircularRegion else { return nil }
-        return ActiveGeofenceWire(
+        return ActiveGeofence(
             id: circularRegion.identifier,
-            location: LocationWire(
+            location: Location(
                 latitude: circularRegion.center.latitude,
                 longitude: circularRegion.center.longitude
             ),
@@ -22,7 +24,9 @@ class ActiveGeofenceWires {
             triggers: [
                 circularRegion.notifyOnEntry ? .enter : nil,
                 circularRegion.notifyOnExit ? .exit : nil
-            ].compactMap { $0 }
+            ].compactMap { $0 },
+            androidSettings: nil,
+            status: .active
         )
     }
 }

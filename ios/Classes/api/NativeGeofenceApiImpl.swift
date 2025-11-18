@@ -53,13 +53,13 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
                 ].compactMap { $0 }
                 
                 // We assume a default for the missing settings. This is the best we can do.
-                let iosSettings = IosGeofenceSettingsWire(initialTrigger: true)
+                let iosSettings = IosGeofenceSettings(initialTrigger: true)
                 // For Android settings, we assume the most common defaults.
-                let androidSettings = AndroidGeofenceSettingsWire(initialTriggers: [.enter, .exit], loiteringDelayMillis: 0)
+                let androidSettings = AndroidGeofenceSettings(initialTriggers: [.enter, .exit], loiteringDelayMillis: 0)
                 
-                let geofence = GeofenceWire(
+                let geofence = Geofence(
                     id: circularRegion.identifier,
-                    location: LocationWire(latitude: circularRegion.center.latitude, longitude: circularRegion.center.longitude),
+                    location: Location(latitude: circularRegion.center.latitude, longitude: circularRegion.center.longitude),
                     radiusMeters: circularRegion.radius,
                     triggers: triggers,
                     iosSettings: iosSettings,
@@ -77,7 +77,7 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
         log.info("Migration complete. Migrated \(migratedCount) geofences. Legacy data has been removed.")
     }
     
-    func createGeofence(geofence: GeofenceWire, completion: @escaping (Result<Void, any Error>) -> Void) {
+    func createGeofence(geofence: Geofence, completion: @escaping (Result<Void, any Error>) -> Void) {
         let region = CLCircularRegion(
             center: CLLocationCoordinate2DMake(geofence.location.latitude, geofence.location.longitude),
             radius: geofence.radiusMeters,
@@ -138,9 +138,9 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
         return geofenceIds
     }
     
-    func getGeofences() throws -> [ActiveGeofenceWire] {
+    func getGeofences() throws -> [ActiveGeofence] {
         let geofences = NativeGeofencePersistence.getAllGeofences().values.map {
-            ActiveGeofenceWires.fromGeofenceWire($0)
+            ActiveGeofenceWires.fromGeofence($0)
         }
         log.debug("getGeofences() found \(geofences.count) geofence(s).")
         return geofences

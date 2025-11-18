@@ -45,7 +45,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
             return
         }
 
-        let params = GeofenceCallbackParamsWire(geofences: [activeGeofence], event: event, location: nil, callbackHandle: geofence.callbackHandle)
+        let params = GeofenceCallbackParams(geofences: [activeGeofence], event: event, location: nil, callbackHandle: geofence.callbackHandle)
         
         // If the engine is not running, start it and then send the event.
         // This handles cases where the app was terminated and restarted by the system.
@@ -65,7 +65,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         }
     }
     
-    private func sendGeofenceEvent(params: GeofenceCallbackParamsWire, activeGeofence: ActiveGeofenceWire) {
+    private func sendGeofenceEvent(params: GeofenceCallbackParams, activeGeofence: ActiveGeofence) {
         guard let backgroundApi = EngineManager.shared.getBackgroundApi() else {
             log.error("Failed to get background API even after engine start. Aborting.")
             return

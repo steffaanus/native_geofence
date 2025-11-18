@@ -7,7 +7,7 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
     
     private let binaryMessenger: FlutterBinaryMessenger
     
-    private var eventQueue: [GeofenceCallbackParamsWire] = .init()
+    private var eventQueue: [GeofenceCallbackParams] = .init()
     private var isClosed: Bool = false
     private var nativeGeoFenceTriggerApi: NativeGeofenceTriggerApi? = nil
     
@@ -18,7 +18,7 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         self.binaryMessenger = binaryMessenger
     }
     
-    func geofenceTriggered(params: GeofenceCallbackParamsWire, completion: @escaping (Result<Void, Error>) -> Void) {
+    func geofenceTriggered(params: GeofenceCallbackParams, completion: @escaping (Result<Void, Error>) -> Void) {
         objc_sync_enter(self)
         
         eventQueue.append(params)
@@ -82,7 +82,7 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         }
     }
     
-    private func callGeofenceTriggerApi(params: GeofenceCallbackParamsWire) {
+    private func callGeofenceTriggerApi(params: GeofenceCallbackParams) {
         guard let api = nativeGeoFenceTriggerApi else {
             log.error("NativeGeofenceTriggerApi was nil, this should not happen.")
             return
@@ -99,7 +99,7 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         })
     }
     
-    private static func geofenceIds(_ params: GeofenceCallbackParamsWire) -> String {
+    private static func geofenceIds(_ params: GeofenceCallbackParams) -> String {
         let ids: [String] = params.geofences.map(\.id)
         return ids.joined(separator: ",")
     }

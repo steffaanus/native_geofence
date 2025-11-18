@@ -6,18 +6,18 @@ class NativeGeofencePersistence {
     private static let persistentState: UserDefaults = .standard
     private static let geofencesKey = "native_geofence.geofences"
 
-    static func saveGeofence(_ geofence: GeofenceWire) {
+    static func saveGeofence(_ geofence: Geofence) {
         var geofences = getAllGeofences()
         geofences[geofence.id] = geofence
         saveAllGeofences(geofences)
         log.debug("Saved geofence \(geofence.id) to persistence.")
     }
 
-    static func getGeofence(id: String) -> GeofenceWire? {
+    static func getGeofence(id: String) -> Geofence? {
         return getAllGeofences()[id]
     }
 
-    static func getAllGeofences() -> [String: GeofenceWire] {
+    static func getAllGeofences() -> [String: Geofence] {
         // Migration logic: If the old callback dictionary exists, clear it and log a warning.
         // A seamless migration is not possible as the old format did not store the full geofence definition.
         if persistentState.dictionary(forKey: Constants.GEOFENCE_CALLBACK_DICT_KEY) != nil {
@@ -29,7 +29,7 @@ class NativeGeofencePersistence {
             return [:]
         }
         do {
-            let geofences = try JSONDecoder().decode([String: GeofenceWire].self, from: data)
+            let geofences = try JSONDecoder().decode([String: Geofence].self, from: data)
             return geofences
         } catch {
             log.error("Error decoding geofences: \(error)")
@@ -50,7 +50,7 @@ class NativeGeofencePersistence {
         log.debug("Removed all geofences from persistence.")
     }
 
-    private static func saveAllGeofences(_ geofences: [String: GeofenceWire]) {
+    private static func saveAllGeofences(_ geofences: [String: Geofence]) {
         do {
             let data = try JSONEncoder().encode(geofences)
             persistentState.set(data, forKey: geofencesKey)
