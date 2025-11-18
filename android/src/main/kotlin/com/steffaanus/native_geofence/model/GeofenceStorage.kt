@@ -26,7 +26,7 @@ class GeofenceStorage(
                 e.triggers.map { it },
                 IosGeofenceSettingsStorage.fromApi(e.iosSettings),
                 AndroidGeofenceSettingsStorage.fromApi(e.androidSettings),
-                0,
+                e.callbackHandle,
                 GeofenceStatus.PENDING,
             )
         }
@@ -40,6 +40,7 @@ class GeofenceStorage(
             triggers.map { it },
             iosSettings.toApi(),
             androidSettings.toApi(),
+            callbackHandle,
         )
     }
 
