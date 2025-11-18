@@ -1,6 +1,7 @@
 package com.steffaanus.native_geofence.model
 
 import com.steffaanus.native_geofence.generated.GeofenceEvent
+import com.steffaanus.native_geofence.generated.GeofenceStatus
 import kotlinx.serialization.Serializable
 
 /**
@@ -25,7 +26,7 @@ data class LegacyGeofenceStorage(
             iosSettings = iosSettings,
             androidSettings = androidSettings,
             callbackHandle = callbackHandle,
-            status = GeofenceStatus.ACTIVE // Assume old geofences are active
+            status = GeofenceStatus.ACTIVE, // Assume old geofences are active
         )
     }
 }

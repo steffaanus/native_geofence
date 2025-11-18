@@ -19,8 +19,6 @@ import com.steffaanus.native_geofence.generated.NativeGeofenceApi
 import com.steffaanus.native_geofence.generated.NativeGeofenceErrorCode
 import com.steffaanus.native_geofence.util.GeofenceEvents
 import com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver
-import com.steffaanus.native_geofence.util.ActiveGeofenceWires
-import com.steffaanus.native_geofence.util.GeofenceWires
 import com.steffaanus.native_geofence.util.NativeGeofencePersistence
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
@@ -53,7 +51,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         for (geofence in geofences) {
             // Re-create ACTIVE geofences and re-try PENDING/FAILED ones.
-            createGeofenceHelper(geofence.toWire(), false, null)
+            createGeofenceHelper(geofence.toApi(), false, null)
         }
         Log.d(TAG, "${geofences.size} geofences synced.")
     }
@@ -65,10 +63,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     override fun getGeofences(): List<ActiveGeofence> {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         return geofences.map {
-            ActiveGeofenceWires.fromGeofence(
-                it.toWire(),
-                it.status
-            )
+            it.toActiveGeofence()
         }.toList()
     }
 
@@ -120,11 +115,11 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
 
     private fun getGeofencePendingIndent(
         context: Context,
-        callbackHandle: Long?
+        geofenceId: String?
     ): PendingIntent {
         val intent = Intent(context, NativeGeofenceBroadcastReceiver::class.java)
-        if (callbackHandle != null) {
-            intent.putExtra(Constants.CALLBACK_HANDLE_KEY, callbackHandle)
+        if (geofenceId != null) {
+            intent.putExtra(Constants.CALLBACK_HANDLE_KEY, geofenceId)
         }
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.getBroadcast(
@@ -151,13 +146,13 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     ) {
         val geofenceStorage = if(isNew) {
             // If it's a new geofence, store it with PENDING status first.
-            val storage = GeofenceWires.toGeofenceStorage(geofence)
+            val storage = GeofenceStorage.fromApi(geofence)
             storage.status = GeofenceStatus.PENDING
             NativeGeofencePersistence.saveOrUpdateGeofence(context, storage)
             storage
         } else {
             // This is a re-creation (e.g. after reboot), the storage entry already exists.
-            GeofenceWires.toGeofenceStorage(geofence)
+            GeofenceStorage.fromApi(geofence)
         }
 
         // We try to create the Geofence without checking for permissions.
@@ -165,15 +160,16 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         geofencingClient.addGeofences(
             GeofencingRequest.Builder().apply {
                 setInitialTrigger(GeofenceEvents.createMask(geofence.androidSettings.initialTriggers))
-                addGeofence(GeofenceWires.toGeofence(geofence))
+                addGeofence(geofence.toGeofence(context))
             }.build(),
-            getGeofencePendingIndent(context, geofence.callbackHandle)
+            getGeofencePendingIndent(context, geofence.id)
         ).run {
             addOnSuccessListener {
-                 if (isNew) {
+                if (isNew) {
                     // Update status to ACTIVE
-                    geofenceStorage.status = GeofenceStatus.ACTIVE
-                    NativeGeofencePersistence.saveOrUpdateGeofence(context, geofenceStorage)
+                    val newGeofence = geofenceStorage
+                    newGeofence.status = GeofenceStatus.ACTIVE
+                    NativeGeofencePersistence.saveOrUpdateGeofence(context, newGeofence)
                 }
                 Log.d(TAG, "Successfully added Geofence ID=${geofence.id}.")
                 callback?.invoke(Result.success(Unit))
@@ -182,8 +178,9 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                 Log.e(TAG, "Failed to add Geofence ID=${geofence.id}: $it")
 
                 if (isNew) {
-                    geofenceStorage.status = GeofenceStatus.FAILED
-                    NativeGeofencePersistence.saveOrUpdateGeofence(context, geofenceStorage)
+                    val newGeofence = geofenceStorage
+                    newGeofence.status = GeofenceStatus.FAILED
+                    NativeGeofencePersistence.saveOrUpdateGeofence(context, newGeofence)
                 }
 
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -232,4 +229,21 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
             }
         }
     }
+}
+
+private fun Geofence.toGeofence(context: Context): com.google.android.gms.location.Geofence {
+    val broadcastIntent = Intent(context, NativeGeofenceBroadcastReceiver::class.java)
+    broadcastIntent.putExtra(Constants.CALLBACK_HANDLE_KEY, id)
+
+    return com.google.android.gms.location.Geofence.Builder()
+        .setRequestId(id)
+        .setCircularRegion(
+            location.latitude,
+            location.longitude,
+            radiusMeters.toFloat()
+        )
+        .setExpirationDuration(androidSettings.expirationDurationMillis ?: -1)
+        .setTransitionTypes(GeofenceEvents.createMask(triggers))
+        .setLoiteringDelay(androidSettings.loiteringDelayMillis.toInt())
+        .build()
 }

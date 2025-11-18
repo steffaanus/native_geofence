@@ -9,9 +9,10 @@ import 'package:pigeon/pigeon.dart';
   swiftOut: 'ios/Classes/generated/NativeGeofenceApi.g.swift',
   kotlinOut:
       'android/src/main/kotlin/com/steffaanus/native_geofence/generated/NativeGeofenceApi.g.kt',
-  kotlinOptions:
-      KotlinOptions(package: 'com.steffaanus.native_geofence.generated'),
-))
+  kotlinOptions: KotlinOptions(
+   package: 'com.steffaanus.native_geofence.generated'
+  ),
+ ))
 
 /// Geofencing events.
 ///

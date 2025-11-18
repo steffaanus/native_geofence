@@ -1,6 +1,6 @@
 package com.steffaanus.native_geofence.model
 
-import com.steffaanus.native_geofence.generated.LocationWire
+import com.steffaanus.native_geofence.generated.Location
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -9,13 +9,13 @@ class LocationStorage(
     private val longitude: Double
 ) {
     companion object {
-        fun fromWire(e: LocationWire): LocationStorage {
+        fun fromApi(e: Location): LocationStorage {
             return LocationStorage(e.latitude, e.longitude)
         }
     }
 
-    fun toWire(): LocationWire {
-        return LocationWire(
+    fun toApi(): Location {
+        return Location(
             latitude,
             longitude,
         )

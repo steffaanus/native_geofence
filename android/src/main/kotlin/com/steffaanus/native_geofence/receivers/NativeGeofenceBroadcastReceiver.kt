@@ -11,11 +11,10 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import com.steffaanus.native_geofence.Constants
 import com.steffaanus.native_geofence.NativeGeofenceBackgroundWorker
-import com.steffaanus.native_geofence.generated.GeofenceCallbackParamsWire
+import com.steffaanus.native_geofence.generated.GeofenceCallbackParams
 import com.steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
-import com.steffaanus.native_geofence.util.ActiveGeofenceWires
 import com.steffaanus.native_geofence.util.GeofenceEvents
-import com.steffaanus.native_geofence.util.LocationWires
+import com.steffaanus.native_geofence.util.NativeGeofencePersistence
 import com.google.android.gms.location.GeofencingEvent
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -26,12 +25,13 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "Geofence broadcast received.")
-
-        val geofenceCallbackParams = getGeofenceCallbackParams(intent) ?: return
-
-        val jsonData =
-            Json.encodeToString(GeofenceCallbackParamsStorage.fromWire(geofenceCallbackParams))
+        val geofencingEvent = GeofencingEvent.fromIntent(intent)
+        if (geofencingEvent == null) {
+            Log.e(TAG, "GeofencingEvent is null.")
+            return
+        }
+        val geofenceCallbackParams = getGeofenceCallbackParams(context, geofencingEvent) ?: return
+        val jsonData = Json.encodeToString(geofenceCallbackParams)
         val workRequest = OneTimeWorkRequestBuilder<NativeGeofenceBackgroundWorker>()
             .setInputData(Data.Builder().putString(Constants.WORKER_PAYLOAD_KEY, jsonData).build())
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -47,18 +47,10 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         work.enqueue()
     }
 
-    private fun getGeofenceCallbackParams(intent: Intent): GeofenceCallbackParamsWire? {
-        val callbackHandle = intent.getLongExtra(Constants.CALLBACK_HANDLE_KEY, 0)
-        if (callbackHandle == 0L) {
-            Log.e(TAG, "GeofencingEvent callback handle is missing.")
-            return null
-        }
-
-        val geofencingEvent = GeofencingEvent.fromIntent(intent)
-        if (geofencingEvent == null) {
-            Log.e(TAG, "GeofencingEvent is null.")
-            return null
-        }
+    private fun getGeofenceCallbackParams(
+        context: Context,
+        geofencingEvent: GeofencingEvent
+    ): GeofenceCallbackParams? {
         if (geofencingEvent.hasError()) {
             Log.e(TAG, "GeofencingEvent has error Code=${geofencingEvent.errorCode}.")
             return null
@@ -74,13 +66,16 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             return null
         }
 
-        // Get the geofences that were triggered. A single event can trigger
-        // multiple geofences.
-        val triggeringGeofences = geofencingEvent.triggeringGeofences?.map {
-            ActiveGeofenceWires.fromGeofence(it)
-        }
-        if (triggeringGeofences.isNullOrEmpty()) {
-            Log.e(TAG, "No triggering geofences found.")
+        val geofence =
+            geofencingEvent.triggeringGeofences?.firstNotNullOfOrNull {
+                NativeGeofencePersistence.getGeofence(
+                    context,
+                    it.requestId
+                )
+            }
+
+        if (geofence == null) {
+            Log.e(TAG, "No geofence found for triggering geofences.")
             return null
         }
 
@@ -89,11 +84,21 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             Log.w(TAG, "No triggering location found.")
         }
 
-        return GeofenceCallbackParamsWire(
-            triggeringGeofences,
-            geofenceEvent,
-            location?.let { LocationWires.fromLocation(it) },
-            callbackHandle
+        val callbackHandle = context.getSharedPreferences(
+            Constants.SHARED_PREFERENCES_KEY,
+            Context.MODE_PRIVATE
+        ).getLong(Constants.CALLBACK_DISPATCHER_HANDLE_KEY, 0L)
+
+        return GeofenceCallbackParams(
+            geofences = listOf(geofence.toActiveGeofence()),
+            event = geofenceEvent,
+            location = location?.let {
+                com.steffaanus.native_geofence.generated.Location(
+                    it.latitude,
+                    it.longitude
+                )
+            },
+            callbackHandle = callbackHandle,
         )
     }
 }

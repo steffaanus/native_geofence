@@ -3,7 +3,7 @@ package com.steffaanus.native_geofence.util
 import android.content.Context
 import android.util.Log
 import com.steffaanus.native_geofence.Constants
-import com.steffaanus.native_geofence.generated.GeofenceWire
+import com.steffaanus.native_geofence.generated.Geofence
 import com.steffaanus.native_geofence.model.GeofenceStorage
 import com.steffaanus.native_geofence.model.LegacyGeofenceStorage
 import kotlinx.serialization.json.Json
@@ -23,8 +23,8 @@ class NativeGeofencePersistence {
         }
 
         @JvmStatic
-        fun saveGeofence(context: Context, geofence: GeofenceWire) {
-            saveOrUpdateGeofence(context, GeofenceWires.toGeofenceStorage(geofence))
+        fun saveGeofence(context: Context, geofence: Geofence) {
+            saveOrUpdateGeofence(context, GeofenceStorage.fromApi(geofence))
         }
 
         fun saveOrUpdateGeofence(context: Context, geofence: GeofenceStorage) {
@@ -66,7 +66,7 @@ class NativeGeofencePersistence {
         }
 
         @JvmStatic
-        private fun getGeofence(context: Context, id: String): GeofenceStorage? {
+        fun getGeofence(context: Context, id: String): GeofenceStorage? {
             val p =
                 context.getSharedPreferences(Constants.SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
             val jsonData = p.getString(getGeofenceKey(id), null)
@@ -80,7 +80,7 @@ class NativeGeofencePersistence {
                 // This might be an old geofence format. Try to migrate.
                 try {
                     val legacyGeofence = Json.decodeFromString<LegacyGeofenceStorage>(jsonData)
-                    val newGeofence = GeofenceWires.toGeofenceStorage(legacyGeofence)
+                    val newGeofence = legacyGeofence.toGeofenceStorage()
                     // Save it in the new format for next time.
                     saveOrUpdateGeofence(context, newGeofence)
                     Log.i(TAG,"Successfully migrated geofence ${id} from legacy format.")

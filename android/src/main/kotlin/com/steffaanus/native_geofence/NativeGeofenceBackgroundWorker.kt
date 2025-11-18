@@ -10,7 +10,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.steffaanus.native_geofence.api.NativeGeofenceBackgroundApiImpl
-import com.steffaanus.native_geofence.generated.GeofenceCallbackParamsWire
+import com.steffaanus.native_geofence.generated.GeofenceCallbackParams
 import com.steffaanus.native_geofence.generated.NativeGeofenceBackgroundApi
 import com.steffaanus.native_geofence.generated.NativeGeofenceTriggerApi
 import com.steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
@@ -133,7 +133,7 @@ class NativeGeofenceBackgroundWorker(
             return
         }
 
-        nativeGeofenceTriggerApi.geofenceTriggered(params) {
+        nativeGeofenceTriggerApi.geofenceTriggered(params, ) {
             stopEngine(Result.success())
         }
     }
@@ -156,7 +156,7 @@ class NativeGeofenceBackgroundWorker(
         Log.d(TAG, "Work took ${fetchDuration}ms.")
     }
 
-    private fun getGeofenceCallbackParams(): GeofenceCallbackParamsWire? {
+    private fun getGeofenceCallbackParams(): GeofenceCallbackParams? {
         val jsonData = workerParams.inputData.getString(Constants.WORKER_PAYLOAD_KEY)
         if (jsonData == null) {
             Log.e(TAG, "Worker payload was missing.")
@@ -164,7 +164,7 @@ class NativeGeofenceBackgroundWorker(
         }
 
         try {
-            return Json.decodeFromString<GeofenceCallbackParamsStorage>(jsonData).toWire()
+            return Json.decodeFromString<GeofenceCallbackParamsStorage>(jsonData).toApi()
         } catch (e: Exception) {
             Log.e(
                 TAG,

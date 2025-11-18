@@ -1,6 +1,6 @@
 package com.steffaanus.native_geofence.model
 
-import com.steffaanus.native_geofence.generated.AndroidGeofenceSettingsWire
+import com.steffaanus.native_geofence.generated.AndroidGeofenceSettings
 import com.steffaanus.native_geofence.generated.GeofenceEvent
 import kotlinx.serialization.Serializable
 
@@ -12,7 +12,7 @@ class AndroidGeofenceSettingsStorage(
     private val notificationResponsivenessMillis: Long? = null
 ) {
     companion object {
-        fun fromWire(e: AndroidGeofenceSettingsWire): AndroidGeofenceSettingsStorage {
+        fun fromApi(e: AndroidGeofenceSettings): AndroidGeofenceSettingsStorage {
             return AndroidGeofenceSettingsStorage(
                 e.initialTriggers,
                 e.expirationDurationMillis,
@@ -22,8 +22,8 @@ class AndroidGeofenceSettingsStorage(
         }
     }
 
-    fun toWire(): AndroidGeofenceSettingsWire {
-        return AndroidGeofenceSettingsWire(
+    fun toApi(): AndroidGeofenceSettings {
+        return AndroidGeofenceSettings(
             initialTriggers,
             expirationDurationMillis,
             loiteringDelayMillis,

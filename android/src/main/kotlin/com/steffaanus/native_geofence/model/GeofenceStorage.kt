@@ -1,7 +1,9 @@
 package com.steffaanus.native_geofence.model
 
 import com.steffaanus.native_geofence.generated.GeofenceEvent
-import com.steffaanus.native_geofence.generated.GeofenceWire
+import com.steffaanus.native_geofence.generated.Geofence
+import com.steffaanus.native_geofence.generated.GeofenceStatus
+import com.steffaanus.native_geofence.generated.ActiveGeofence
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -16,29 +18,39 @@ class GeofenceStorage(
     var status: GeofenceStatus = GeofenceStatus.PENDING,
 ) {
     companion object {
-        fun fromWire(e: GeofenceWire): GeofenceStorage {
+        fun fromApi(e: Geofence): GeofenceStorage {
             return GeofenceStorage(
                 e.id,
-                LocationStorage.fromWire(e.location),
+                LocationStorage.fromApi(e.location),
                 e.radiusMeters,
-                e.triggers,
-                IosGeofenceSettingsStorage.fromWire(e.iosSettings),
-                AndroidGeofenceSettingsStorage.fromWire(e.androidSettings),
-                e.callbackHandle,
+                e.triggers.map { it },
+                IosGeofenceSettingsStorage.fromApi(e.iosSettings),
+                AndroidGeofenceSettingsStorage.fromApi(e.androidSettings),
+                0,
                 GeofenceStatus.PENDING,
             )
         }
     }
 
-    fun toWire(): GeofenceWire {
-        return GeofenceWire(
+    fun toApi(): Geofence {
+        return Geofence(
             id,
-            location.toWire(),
+            location.toApi(),
             radiusMeters,
-            triggers,
-            iosSettings.toWire(),
-            androidSettings.toWire(),
-            callbackHandle
+            triggers.map { it },
+            iosSettings.toApi(),
+            androidSettings.toApi(),
+        )
+    }
+
+    fun toActiveGeofence(): ActiveGeofence {
+        return ActiveGeofence(
+            id,
+            location.toApi(),
+            radiusMeters,
+            triggers.toList(),
+            androidSettings.toApi(),
+            status,
         )
     }
 }
