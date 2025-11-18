@@ -100,7 +100,7 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
     }
     
     private static func geofenceIds(_ params: GeofenceCallbackParams) -> String {
-        let ids: [String] = params.geofences.map(\.id)
+        let ids: [String] = params.geofences.compactMap { $0?.id }
         return ids.joined(separator: ",")
     }
 }
