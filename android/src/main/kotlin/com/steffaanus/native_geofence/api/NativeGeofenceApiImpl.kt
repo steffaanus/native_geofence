@@ -29,6 +29,8 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         private val TAG = "NativeGeofenceApiImpl"
     }
 
+    private var lastSyncTime = 0L
+    private val SYNC_DEBOUNCE_MS = 5000L // 5 seconden
     private val geofencingClient = LocationServices.getGeofencingClient(context)
 
     override fun initialize(callbackDispatcherHandle: Long) {
@@ -59,6 +61,13 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     }
 
     internal fun syncGeofences() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSyncTime < SYNC_DEBOUNCE_MS) {
+            Log.d(TAG, "Sync skipped - too soon after last sync")
+            return
+        }
+        lastSyncTime = currentTime
+
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         for (geofence in geofences) {
             // First remove the geofence if it exists, then re-create it.
@@ -114,7 +123,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     }
 
     override fun removeAllGeofences(callback: (Result<Unit>) -> Unit) {
-        geofencingClient.removeGeofences(getGeofencePendingIndent(context, null)).run {
+        geofencingClient.removeGeofences(getGeofencePendingIndent(context)).run {
             addOnSuccessListener {
                 NativeGeofencePersistence.removeAllGeofences(context)
                 Log.d(TAG, "Removed all geofences (if any).")
@@ -134,25 +143,26 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         }
     }
 
-    private fun getGeofencePendingIndent(
-        context: Context,
-        callbackHandle: Long?
-    ): PendingIntent {
+    private fun getGeofencePendingIndent(context: Context): PendingIntent {
         val intent = Intent(context, NativeGeofenceBroadcastReceiver::class.java)
-        if (callbackHandle != null) {
-            intent.putExtra(Constants.CALLBACK_HANDLE_KEY, callbackHandle)
-        }
+        val requestCode = "NativeGeofence".hashCode()
+
+//        We gaan 1 intent gebruiken voor alle events. De callbackHandle wordt al uit storage gehaald!
+//        Extras maken een intent uniek.
+//        if (callbackHandle != null) {
+//            intent.putExtra(Constants.CALLBACK_HANDLE_KEY, callbackHandle)
+//        }
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.getBroadcast(
                 context,
-                0,
+                requestCode,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
             )
         } else {
             PendingIntent.getBroadcast(
                 context,
-                0,
+                requestCode,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT
             )
@@ -182,7 +192,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                 setInitialTrigger(GeofenceEvents.createMask(geofence.androidSettings.initialTriggers))
                 addGeofence(geofence.toGeofence(context))
             }.build(),
-            getGeofencePendingIndent(context, geofence.callbackHandle)
+            getGeofencePendingIndent(context)
         ).run {
             addOnSuccessListener {
                 // Note: Google's addGeofences API can return success even when the geofence

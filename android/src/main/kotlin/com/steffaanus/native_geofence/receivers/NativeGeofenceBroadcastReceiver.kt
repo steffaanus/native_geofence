@@ -94,7 +94,9 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             Log.w(TAG, "No triggering location found.")
         }
 
-        val callbackHandle = intent.getLongExtra(Constants.CALLBACK_HANDLE_KEY, 0L)
+        // val callbackHandle = intent.getLongExtra(Constants.CALLBACK_HANDLE_KEY, 0L)
+        // Callback handle komt uit de geofence storage, niet uit de Intent
+        val callbackHandle = geofence.callbackHandle
 
         return GeofenceCallbackParams(
             geofences = listOf(geofence.toActiveGeofence()),
