@@ -61,10 +61,21 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     internal fun syncGeofences() {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         for (geofence in geofences) {
+            // First remove the geofence if it exists, then re-create it.
+            // This prevents errors when geofences already exist in the system.
             // Re-create ACTIVE geofences and re-try PENDING/FAILED ones.
-            createGeofenceHelper(geofence.toApi(), false, null)
+            geofencingClient.removeGeofences(listOf(geofence.id)).run {
+                addOnSuccessListener {
+                    createGeofenceHelper(geofence.toApi(), false, null)
+                }
+                addOnFailureListener {
+                    // If the geofence does not exist, this call will fail.
+                    // In that case, we can ignore the error and just create the geofence.
+                    createGeofenceHelper(geofence.toApi(), false, null)
+                }
+            }
         }
-        Log.d(TAG, "${geofences.size} geofences synced.")
+        Log.d(TAG, "${geofences.size} geofences sync initiated.")
     }
 
     override fun getGeofenceIds(): List<String> {
