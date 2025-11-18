@@ -31,7 +31,8 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             return
         }
         val geofenceCallbackParams = getGeofenceCallbackParams(context, geofencingEvent, intent) ?: return
-        val jsonData = Json.encodeToString(geofenceCallbackParams)
+        val geofenceCallbackParamsStorage = GeofenceCallbackParamsStorage.fromApi(geofenceCallbackParams)
+        val jsonData = Json.encodeToString(geofenceCallbackParamsStorage)
         val workRequest = OneTimeWorkRequestBuilder<NativeGeofenceBackgroundWorker>()
             .setInputData(Data.Builder().putString(Constants.WORKER_PAYLOAD_KEY, jsonData).build())
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
