@@ -13,6 +13,6 @@ class NativeGeofenceRebootBroadcastReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         Log.i(TAG, "Boot completed broadcast received. Re-creating geofences!")
-        NativeGeofenceApiImpl(context).syncGeofences()
+        NativeGeofenceApiImpl(context).syncGeofences(true)
     }
 }

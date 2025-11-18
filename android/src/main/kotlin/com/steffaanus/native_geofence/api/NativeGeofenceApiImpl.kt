@@ -39,7 +39,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
             .putLong(Constants.CALLBACK_DISPATCHER_HANDLE_KEY, callbackDispatcherHandle)
             .apply()
         Log.d(TAG, "Initialized NativeGeofenceApi.")
-        syncGeofences()
+        syncGeofences(false)
     }
 
     override fun createGeofence(
@@ -60,7 +60,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         }
     }
 
-    internal fun syncGeofences() {
+    internal fun syncGeofences(force: Boolean) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSyncTime < SYNC_DEBOUNCE_MS) {
             Log.d(TAG, "Sync skipped - too soon after last sync")
@@ -72,15 +72,17 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         for (geofence in geofences) {
             // First remove the geofence if it exists, then re-create it.
             // This prevents errors when geofences already exist in the system.
-            // Re-create ACTIVE geofences and re-try PENDING/FAILED ones.
-            geofencingClient.removeGeofences(listOf(geofence.id)).run {
-                addOnSuccessListener {
-                    createGeofenceHelper(geofence.toApi(), false, null)
-                }
-                addOnFailureListener {
-                    // If the geofence does not exist, this call will fail.
-                    // In that case, we can ignore the error and just create the geofence.
-                    createGeofenceHelper(geofence.toApi(), false, null)
+            // Re-try PENDING/FAILED ones.
+            if (force || geofence.status != GeofenceStatus.ACTIVE) {
+                geofencingClient.removeGeofences(listOf(geofence.id)).run {
+                    addOnSuccessListener {
+                        createGeofenceHelper(geofence.toApi(), false, null)
+                    }
+                    addOnFailureListener {
+                        // If the geofence does not exist, this call will fail.
+                        // In that case, we can ignore the error and just create the geofence.
+                        createGeofenceHelper(geofence.toApi(), false, null)
+                    }
                 }
             }
         }
@@ -260,6 +262,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
 }
 
 private fun Geofence.toGeofence(context: Context): com.google.android.gms.location.Geofence {
+
     val broadcastIntent = Intent(context, NativeGeofenceBroadcastReceiver::class.java)
     broadcastIntent.putExtra(Constants.CALLBACK_HANDLE_KEY, callbackHandle)
 
@@ -273,5 +276,6 @@ private fun Geofence.toGeofence(context: Context): com.google.android.gms.locati
         .setExpirationDuration(androidSettings.expirationDurationMillis ?: -1)
         .setTransitionTypes(GeofenceEvents.createMask(triggers))
         .setLoiteringDelay(androidSettings.loiteringDelayMillis.toInt())
+        .setNotificationResponsiveness(androidSettings.notificationResponsivenessMillis ?: 0)
         .build()
 }
