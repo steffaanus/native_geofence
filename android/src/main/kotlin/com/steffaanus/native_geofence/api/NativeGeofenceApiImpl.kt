@@ -44,7 +44,18 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         geofence: Geofence,
         callback: (Result<Unit>) -> Unit
     ) {
-        createGeofenceHelper(geofence, true, callback)
+        // First remove the geofence, if it exists.
+        // In the success/failure callback, the geofence is then created.
+        geofencingClient.removeGeofences(listOf(geofence.id)).run {
+            addOnSuccessListener {
+                createGeofenceHelper(geofence, true, callback)
+            }
+            addOnFailureListener {
+                // If the geofence does not exist, this call will fail.
+                // In that case, we can ignore the error and just create the geofence.
+                createGeofenceHelper(geofence, true, callback)
+            }
+        }
     }
 
     internal fun syncGeofences() {
@@ -175,11 +186,10 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
             addOnFailureListener {
                 Log.e(TAG, "Failed to add Geofence ID=${geofence.id}: $it")
 
-                if (isNew) {
-                    val newGeofence = geofenceStorage
-                    newGeofence.status = GeofenceStatus.FAILED
-                    NativeGeofencePersistence.saveOrUpdateGeofence(context, newGeofence)
-                }
+                // unconditionally set status to FAILED on failure
+                val failedGeofence = geofenceStorage
+                failedGeofence.status = GeofenceStatus.FAILED
+                NativeGeofencePersistence.saveOrUpdateGeofence(context, failedGeofence)
 
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
