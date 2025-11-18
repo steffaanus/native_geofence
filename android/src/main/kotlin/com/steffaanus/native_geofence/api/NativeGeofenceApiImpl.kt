@@ -112,14 +112,13 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         }
     }
 
-
     private fun getGeofencePendingIndent(
         context: Context,
-        geofenceId: String?
+        callbackHandle: Long?
     ): PendingIntent {
         val intent = Intent(context, NativeGeofenceBroadcastReceiver::class.java)
-        if (geofenceId != null) {
-            intent.putExtra(Constants.CALLBACK_HANDLE_KEY, geofenceId)
+        if (callbackHandle != null) {
+            intent.putExtra(Constants.CALLBACK_HANDLE_KEY, callbackHandle)
         }
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.getBroadcast(
@@ -137,7 +136,6 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
             )
         }
     }
-
     @SuppressLint("MissingPermission")
     private fun createGeofenceHelper(
         geofence: Geofence,
@@ -162,7 +160,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                 setInitialTrigger(GeofenceEvents.createMask(geofence.androidSettings.initialTriggers))
                 addGeofence(geofence.toGeofence(context))
             }.build(),
-            getGeofencePendingIndent(context, geofence.id)
+            getGeofencePendingIndent(context, geofence.callbackHandle)
         ).run {
             addOnSuccessListener {
                 if (isNew) {
