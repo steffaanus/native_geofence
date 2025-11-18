@@ -174,13 +174,12 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
             getGeofencePendingIndent(context, geofence.callbackHandle)
         ).run {
             addOnSuccessListener {
-                if (isNew) {
-                    // Update status to ACTIVE
-                    val newGeofence = geofenceStorage
-                    newGeofence.status = GeofenceStatus.ACTIVE
-                    NativeGeofencePersistence.saveOrUpdateGeofence(context, newGeofence)
-                }
-                Log.d(TAG, "Successfully added Geofence ID=${geofence.id}.")
+                // Note: Google's addGeofences API can return success even when the geofence
+                // is not actually registered due to system constraints (e.g., location services
+                // disabled, battery optimization, etc.). Therefore, we keep the status as PENDING
+                // and only update to ACTIVE when we receive an actual geofence event.
+                // The status will remain PENDING until the system can successfully register it.
+                Log.d(TAG, "API call succeeded for Geofence ID=${geofence.id}, status remains PENDING until first trigger.")
                 callback?.invoke(Result.success(Unit))
             }
             addOnFailureListener {

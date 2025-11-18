@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.steffaanus.native_geofence.generated.GeofenceStatus
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -79,6 +80,13 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         if (geofence == null) {
             Log.e(TAG, "No geofence found for triggering geofences.")
             return null
+        }
+
+        // Update geofence status to ACTIVE now that we've confirmed it's actually working
+        if (geofence.status != GeofenceStatus.ACTIVE) {
+            geofence.status = GeofenceStatus.ACTIVE
+            NativeGeofencePersistence.saveOrUpdateGeofence(context, geofence)
+            Log.d(TAG, "Updated Geofence ID=${geofence.id} status to ACTIVE after receiving event.")
         }
 
         val location = geofencingEvent.triggeringLocation
