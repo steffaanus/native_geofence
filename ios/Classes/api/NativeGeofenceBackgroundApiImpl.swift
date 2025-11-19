@@ -51,10 +51,6 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         processQueue()
     }
     
-    func promoteToForeground() throws {
-        log.info("promoteToForeground called. iOS does not distinguish between foreground and background, nothing to do here.")
-    }
-    
     func demoteToBackground() throws {
         log.info("demoteToBackground called. iOS does not distinguish between foreground and background, nothing to do here.")
     }

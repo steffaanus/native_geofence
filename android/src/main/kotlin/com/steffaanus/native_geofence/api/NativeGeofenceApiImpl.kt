@@ -276,6 +276,6 @@ private fun Geofence.toGeofence(context: Context): com.google.android.gms.locati
         .setExpirationDuration(androidSettings.expirationDurationMillis ?: -1)
         .setTransitionTypes(GeofenceEvents.createMask(triggers))
         .setLoiteringDelay(androidSettings.loiteringDelayMillis.toInt())
-        .setNotificationResponsiveness(androidSettings.notificationResponsivenessMillis ?: 0)
+        .setNotificationResponsiveness((androidSettings.notificationResponsivenessMillis ?: 0).toInt())
         .build()
 }

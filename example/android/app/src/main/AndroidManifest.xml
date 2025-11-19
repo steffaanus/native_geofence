@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Required for ForegroundService with location type (Android 10+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     
     <!-- Required if your app targets Android 10 (API level 29) or higher -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
@@ -50,7 +54,9 @@
             </intent-filter>
         </receiver>
         <service android:name="com.steffaanus.native_geofence.NativeGeofenceForegroundService"
-                 android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
         
         <!-- Used by plugin: flutter_local_notifications -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />

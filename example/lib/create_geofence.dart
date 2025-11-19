@@ -14,7 +14,7 @@ class CreateGeofence extends StatefulWidget {
 
 class CreateGeofenceState extends State<CreateGeofence> {
   static final Location _timesSquare =
-      Location(latitude: 40.75798, longitude: -73.98554);
+      Location(latitude: 53.164677890945015, longitude: 5.445930351661604);
 
   List<String> activeGeofences = [];
   late Geofence data;

@@ -7,11 +7,24 @@
     <!-- Makes it clear that the plugin requires background location for geofencing. -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- Essential declaration of the BroadcastReceiver. -->
+    <!-- Required for ForegroundService (Android 9+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    
+    <!-- Required for ForegroundService with location type (Android 10+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
     <application>
+        <!-- Essential declaration of the BroadcastReceiver. -->
         <receiver
             android:name="com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver"
             android:enabled="true"
             android:exported="true" />
+        
+        <!-- ForegroundService for processing geofence events -->
+        <service
+            android:name=".NativeGeofenceForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
     </application>
 </manifest>

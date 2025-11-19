@@ -3,6 +3,7 @@ package com.steffaanus.native_geofence.receivers
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import com.steffaanus.native_geofence.generated.GeofenceStatus
 import androidx.work.Data
@@ -12,6 +13,7 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import com.steffaanus.native_geofence.Constants
 import com.steffaanus.native_geofence.NativeGeofenceBackgroundWorker
+import com.steffaanus.native_geofence.NativeGeofenceForegroundService
 import com.steffaanus.native_geofence.generated.GeofenceCallbackParams
 import com.steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
 import com.steffaanus.native_geofence.util.GeofenceEvents
@@ -34,6 +36,50 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         val geofenceCallbackParams = getGeofenceCallbackParams(context, geofencingEvent, intent) ?: return
         val geofenceCallbackParamsStorage = GeofenceCallbackParamsStorage.fromApi(geofenceCallbackParams)
         val jsonData = Json.encodeToString(geofenceCallbackParamsStorage)
+        
+        // Try ForegroundService first for Android 8+ (API 26+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (tryStartForegroundService(context, jsonData)) {
+                return
+            }
+            // If ForegroundService failed, fall through to WorkManager
+        }
+        
+        // Fallback to WorkManager for Android 7 and below, or if ForegroundService failed
+        Log.d(TAG, "Using WorkManager fallback")
+        startWorkManager(context, jsonData)
+    }
+    
+    /**
+     * Attempt to start the ForegroundService to process the geofence event.
+     * Returns true if successful, false if it failed and should fallback to WorkManager.
+     */
+    private fun tryStartForegroundService(context: Context, jsonData: String): Boolean {
+        try {
+            val serviceIntent = Intent(context, NativeGeofenceForegroundService::class.java).apply {
+                action = Constants.ACTION_PROCESS_GEOFENCE
+                putExtra(Constants.EXTRA_GEOFENCE_CALLBACK_PARAMS, jsonData)
+            }
+            
+            context.startForegroundService(serviceIntent)
+            Log.d(TAG, "Successfully started ForegroundService for geofence event")
+            return true
+            
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException starting ForegroundService: ${e.message}", e)
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "IllegalStateException starting ForegroundService: ${e.message}", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected exception starting ForegroundService: ${e.message}", e)
+        }
+        
+        return false
+    }
+    
+    /**
+     * Start WorkManager to process the geofence event as a fallback.
+     */
+    private fun startWorkManager(context: Context, jsonData: String) {
         val workRequest = OneTimeWorkRequestBuilder<NativeGeofenceBackgroundWorker>()
             .setInputData(Data.Builder().putString(Constants.WORKER_PAYLOAD_KEY, jsonData).build())
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -47,6 +93,7 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             workRequest
         )
         work.enqueue()
+        Log.d(TAG, "WorkManager enqueued for geofence event")
     }
 
     private fun getGeofenceCallbackParams(
