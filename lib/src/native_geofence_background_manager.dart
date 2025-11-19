@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:native_geofence/src/generated/platform_bindings.g.dart';
+import 'generated/native_geofence_api.g.dart';
 
 class NativeGeofenceBackgroundManager {
   static NativeGeofenceBackgroundManager? _instance;

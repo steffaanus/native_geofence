@@ -1,3 +1,3 @@
-import 'package:native_geofence/src/generated/platform_bindings.g.dart';
+import 'generated/native_geofence_api.g.dart';
 
 typedef GeofenceCallback = Future<void> Function(GeofenceCallbackParams params);

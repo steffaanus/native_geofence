@@ -20,5 +20,12 @@ class Constants {
         const val EXTRA_GEOFENCE_CALLBACK_PARAMS = "$PACKAGE_NAME.geofence_callback_params"
 
         const val ISOLATE_HOLDER_WAKE_LOCK_TAG = "$PACKAGE_NAME:wake_lock"
+        
+        const val FOREGROUND_NOTIFICATION_TITLE_KEY = "$PACKAGE_NAME.notification_title"
+        const val FOREGROUND_NOTIFICATION_TEXT_KEY = "$PACKAGE_NAME.notification_text"
+        
+        // Default values for foreground service notification
+        const val DEFAULT_NOTIFICATION_TITLE = "Processing geofence event."
+        const val DEFAULT_NOTIFICATION_TEXT = "We noticed you are near a key location and are checking if we can help."
     }
 }

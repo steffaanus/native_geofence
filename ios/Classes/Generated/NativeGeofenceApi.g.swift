@@ -409,6 +409,40 @@ struct GeofenceCallbackParams: Hashable {
   }
 }
 
+/// Configuration for the foreground service notification.
+///
+/// Used to customize the notification shown when the plugin's foreground
+/// service is processing geofence events on Android.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct ForegroundServiceConfiguration: Hashable {
+  var notificationTitle: String
+  var notificationText: String
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> ForegroundServiceConfiguration? {
+    let notificationTitle = pigeonVar_list[0] as! String
+    let notificationText = pigeonVar_list[1] as! String
+
+    return ForegroundServiceConfiguration(
+      notificationTitle: notificationTitle,
+      notificationText: notificationText
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      notificationTitle,
+      notificationText,
+    ]
+  }
+  static func == (lhs: ForegroundServiceConfiguration, rhs: ForegroundServiceConfiguration) -> Bool {
+    return deepEqualsNativeGeofenceApi(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashNativeGeofenceApi(value: toList(), hasher: &hasher)
+  }
+}
+
 private class NativeGeofenceApiPigeonCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
@@ -442,6 +476,8 @@ private class NativeGeofenceApiPigeonCodecReader: FlutterStandardReader {
       return ActiveGeofence.fromList(self.readValue() as! [Any?])
     case 137:
       return GeofenceCallbackParams.fromList(self.readValue() as! [Any?])
+    case 138:
+      return ForegroundServiceConfiguration.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
     }
@@ -477,6 +513,9 @@ private class NativeGeofenceApiPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? GeofenceCallbackParams {
       super.writeByte(137)
       super.writeValue(value.toList())
+    } else if let value = value as? ForegroundServiceConfiguration {
+      super.writeByte(138)
+      super.writeValue(value.toList())
     } else {
       super.writeValue(value)
     }
@@ -500,7 +539,7 @@ class NativeGeofenceApiPigeonCodec: FlutterStandardMessageCodec, @unchecked Send
 
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol NativeGeofenceApi {
-  func initialize(callbackDispatcherHandle: Int64) throws
+  func initialize(callbackDispatcherHandle: Int64, foregroundServiceConfig: ForegroundServiceConfiguration?) throws
   func createGeofence(geofence: Geofence, completion: @escaping (Result<Void, Error>) -> Void)
   func getGeofenceIds() throws -> [String]
   func getGeofences() throws -> [ActiveGeofence]
@@ -519,8 +558,9 @@ class NativeGeofenceApiSetup {
       initializeChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let callbackDispatcherHandleArg = args[0] as! Int64
+        let foregroundServiceConfigArg: ForegroundServiceConfiguration? = nilOrValue(args[1])
         do {
-          try api.initialize(callbackDispatcherHandle: callbackDispatcherHandleArg)
+          try api.initialize(callbackDispatcherHandle: callbackDispatcherHandleArg, foregroundServiceConfig: foregroundServiceConfigArg)
           reply(wrapResult(nil))
         } catch {
           reply(wrapError(error))

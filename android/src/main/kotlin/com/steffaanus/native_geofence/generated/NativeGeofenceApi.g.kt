@@ -387,6 +387,44 @@ data class GeofenceCallbackParams (
 
   override fun hashCode(): Int = toList().hashCode()
 }
+
+/**
+ * Configuration for the foreground service notification.
+ *
+ * Used to customize the notification shown when the plugin's foreground
+ * service is processing geofence events on Android.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class ForegroundServiceConfiguration (
+  val notificationTitle: String,
+  val notificationText: String
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): ForegroundServiceConfiguration {
+      val notificationTitle = pigeonVar_list[0] as String
+      val notificationText = pigeonVar_list[1] as String
+      return ForegroundServiceConfiguration(notificationTitle, notificationText)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      notificationTitle,
+      notificationText,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is ForegroundServiceConfiguration) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return NativeGeofenceApiPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
 private open class NativeGeofenceApiPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -435,6 +473,11 @@ private open class NativeGeofenceApiPigeonCodec : StandardMessageCodec() {
           GeofenceCallbackParams.fromList(it)
         }
       }
+      138.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          ForegroundServiceConfiguration.fromList(it)
+        }
+      }
       else -> super.readValueOfType(type, buffer)
     }
   }
@@ -476,6 +519,10 @@ private open class NativeGeofenceApiPigeonCodec : StandardMessageCodec() {
         stream.write(137)
         writeValue(stream, value.toList())
       }
+      is ForegroundServiceConfiguration -> {
+        stream.write(138)
+        writeValue(stream, value.toList())
+      }
       else -> super.writeValue(stream, value)
     }
   }
@@ -484,7 +531,7 @@ private open class NativeGeofenceApiPigeonCodec : StandardMessageCodec() {
 
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface NativeGeofenceApi {
-  fun initialize(callbackDispatcherHandle: Long)
+  fun initialize(callbackDispatcherHandle: Long, foregroundServiceConfig: ForegroundServiceConfiguration?)
   fun createGeofence(geofence: Geofence, callback: (Result<Unit>) -> Unit)
   fun getGeofenceIds(): List<String>
   fun getGeofences(): List<ActiveGeofence>
@@ -506,8 +553,9 @@ interface NativeGeofenceApi {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val callbackDispatcherHandleArg = args[0] as Long
+            val foregroundServiceConfigArg = args[1] as ForegroundServiceConfiguration?
             val wrapped: List<Any?> = try {
-              api.initialize(callbackDispatcherHandleArg)
+              api.initialize(callbackDispatcherHandleArg, foregroundServiceConfigArg)
               listOf(null)
             } catch (exception: Throwable) {
               NativeGeofenceApiPigeonUtils.wrapError(exception)

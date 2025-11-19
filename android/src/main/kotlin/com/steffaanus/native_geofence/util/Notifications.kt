@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
+import com.steffaanus.native_geofence.Constants
 
 class Notifications {
     companion object {
@@ -15,7 +16,6 @@ class Notifications {
             return createForegroundServiceNotification(context)
         }
 
-        // TODO: Make notification details customizable by plugin user.
         fun createForegroundServiceNotification(context: Context): Notification {
             val channelId = "native_geofence_plugin_channel"
             val channel = NotificationChannel(
@@ -29,12 +29,24 @@ class Notifications {
             @SuppressLint("DiscouragedApi") // Can't use R syntax in Flutter plugin.
             val imageId = context.resources.getIdentifier("ic_launcher", "mipmap", context.packageName)
 
+            // Read notification configuration from SharedPreferences
+            val prefs = context.getSharedPreferences(Constants.SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
+            val title = prefs.getString(
+                Constants.FOREGROUND_NOTIFICATION_TITLE_KEY,
+                Constants.DEFAULT_NOTIFICATION_TITLE
+            ) ?: Constants.DEFAULT_NOTIFICATION_TITLE
+            
+            val text = prefs.getString(
+                Constants.FOREGROUND_NOTIFICATION_TEXT_KEY,
+                Constants.DEFAULT_NOTIFICATION_TEXT
+            ) ?: Constants.DEFAULT_NOTIFICATION_TEXT
+
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(
                 channel
             )
             return NotificationCompat.Builder(context, channelId)
-                .setContentTitle("Processing geofence event.")
-                .setContentText("We noticed you are near a key location and are checking if we can help.")
+                .setContentTitle(title)
+                .setContentText(text)
                 .setSmallIcon(imageId)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build()

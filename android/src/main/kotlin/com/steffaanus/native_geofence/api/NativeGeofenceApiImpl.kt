@@ -13,6 +13,7 @@ import com.steffaanus.native_geofence.model.GeofenceStorage
 import com.steffaanus.native_geofence.Constants
 import com.steffaanus.native_geofence.generated.ActiveGeofence
 import com.steffaanus.native_geofence.generated.FlutterError
+import com.steffaanus.native_geofence.generated.ForegroundServiceConfiguration
 import com.steffaanus.native_geofence.generated.Geofence
 import com.steffaanus.native_geofence.generated.GeofenceStatus
 import com.steffaanus.native_geofence.generated.NativeGeofenceApi
@@ -33,11 +34,23 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     private val SYNC_DEBOUNCE_MS = 5000L // 5 seconden
     private val geofencingClient = LocationServices.getGeofencingClient(context)
 
-    override fun initialize(callbackDispatcherHandle: Long) {
-        context.getSharedPreferences(Constants.SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
-            .edit()
-            .putLong(Constants.CALLBACK_DISPATCHER_HANDLE_KEY, callbackDispatcherHandle)
-            .apply()
+    override fun initialize(
+        callbackDispatcherHandle: Long,
+        foregroundServiceConfig: ForegroundServiceConfiguration?
+    ) {
+        val prefs = context.getSharedPreferences(Constants.SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        
+        editor.putLong(Constants.CALLBACK_DISPATCHER_HANDLE_KEY, callbackDispatcherHandle)
+        
+        // Store notification configuration if provided
+        if (foregroundServiceConfig != null) {
+            editor.putString(Constants.FOREGROUND_NOTIFICATION_TITLE_KEY, foregroundServiceConfig.notificationTitle)
+            editor.putString(Constants.FOREGROUND_NOTIFICATION_TEXT_KEY, foregroundServiceConfig.notificationText)
+            Log.d(TAG, "Stored foreground service notification configuration")
+        }
+        
+        editor.apply()
         Log.d(TAG, "Initialized NativeGeofenceApi.")
         syncGeofences(false)
     }

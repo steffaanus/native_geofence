@@ -113,6 +113,20 @@ class GeofenceCallbackParams {
   });
 }
 
+/// Configuration for the foreground service notification.
+///
+/// Used to customize the notification shown when the plugin's foreground
+/// service is processing geofence events on Android.
+class ForegroundServiceConfiguration {
+  final String notificationTitle;
+  final String notificationText;
+
+  ForegroundServiceConfiguration({
+    required this.notificationTitle,
+    required this.notificationText,
+  });
+}
+
 /// Errors that can occur when interacting with the native geofence API.
 enum NativeGeofenceErrorCode {
   unknown,
@@ -161,7 +175,10 @@ enum NativeGeofenceErrorCode {
 
 @HostApi()
 abstract class NativeGeofenceApi {
-  void initialize({required int callbackDispatcherHandle});
+  void initialize({
+    required int callbackDispatcherHandle,
+    ForegroundServiceConfiguration? foregroundServiceConfig,
+  });
 
   @async
   void createGeofence({required Geofence geofence});

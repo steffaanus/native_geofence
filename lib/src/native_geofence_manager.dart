@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:native_geofence/src/callback_dispatcher.dart';
-import 'package:native_geofence/src/generated/platform_bindings.g.dart';
+import 'package:native_geofence/src/generated/native_geofence_api.g.dart';
 import 'package:native_geofence/src/model/native_geofence_exception.dart';
 import 'package:native_geofence/src/platform/module.dart';
 import 'package:native_geofence/src/typedefs.dart';
@@ -29,10 +29,15 @@ class NativeGeofenceManager {
 
   /// Initialize the plugin.
   ///
+  /// [foregroundServiceConfig] optionally configures the Android foreground
+  /// service notification. If null, default values will be used.
+  ///
   /// Must be called before any other method.
   ///
   /// Throws [NativeGeofenceException].
-  Future<void> initialize() async {
+  Future<void> initialize({
+    ForegroundServiceConfiguration? foregroundServiceConfig,
+  }) async {
     final CallbackHandle? callback;
     try {
       callback = PluginUtilities.getCallbackHandle(callbackDispatcher);
@@ -44,7 +49,10 @@ class NativeGeofenceManager {
           message: 'Callback dispatcher is invalid.');
     }
     return _api
-        .initialize(callbackDispatcherHandle: callback.toRawHandle())
+        .initialize(
+          callbackDispatcherHandle: callback.toRawHandle(),
+          foregroundServiceConfig: foregroundServiceConfig,
+        )
         .catchError(NativeGeofenceExceptionMapper.catchError<void>);
   }
 

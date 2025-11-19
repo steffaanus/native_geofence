@@ -14,8 +14,14 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
         self.locationManagerDelegate = LocationManagerDelegate(flutterPluginRegistrantCallback: registerPlugins)
     }
     
-    func initialize(callbackDispatcherHandle: Int64) throws {
+    func initialize(
+        callbackDispatcherHandle: Int64,
+        foregroundServiceConfig: ForegroundServiceConfiguration?
+    ) throws {
         NativeGeofencePersistence.setCallbackDispatcherHandle(callbackDispatcherHandle)
+        
+        // Note: foregroundServiceConfig is for Android only and is not used on iOS
+        // as iOS does not have an equivalent foreground service notification.
         
         // Migrate legacy data before doing anything else.
         migrateLegacyData()

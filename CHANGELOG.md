@@ -1,3 +1,7 @@
+## 2.1.0
+
+*   **Feat (Android):** Added configurable foreground service notification. Apps can now customize the notification title and text shown when the plugin processes geofence events by passing a `ForegroundServiceConfiguration` to the `initialize()` method. This feature is fully backwards compatible - existing apps will continue to use default notification text.
+
 ## 2.0.0
 
 *   **Feat (iOS & Android):** Implemented a seamless data migration for the internal storage format. Existing geofences on both platforms will be automatically migrated to the new, more robust storage structure. No breaking changes for existing users.

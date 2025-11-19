@@ -441,6 +441,57 @@ class GeofenceCallbackParams {
   int get hashCode => Object.hashAll(_toList());
 }
 
+/// Configuration for the foreground service notification.
+///
+/// Used to customize the notification shown when the plugin's foreground
+/// service is processing geofence events on Android.
+class ForegroundServiceConfiguration {
+  ForegroundServiceConfiguration({
+    required this.notificationTitle,
+    required this.notificationText,
+  });
+
+  String notificationTitle;
+
+  String notificationText;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      notificationTitle,
+      notificationText,
+    ];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static ForegroundServiceConfiguration decode(Object result) {
+    result as List<Object?>;
+    return ForegroundServiceConfiguration(
+      notificationTitle: result[0]! as String,
+      notificationText: result[1]! as String,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! ForegroundServiceConfiguration ||
+        other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList());
+}
+
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -475,6 +526,9 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is GeofenceCallbackParams) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
+    } else if (value is ForegroundServiceConfiguration) {
+      buffer.putUint8(138);
+      writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
     }
@@ -504,6 +558,8 @@ class _PigeonCodec extends StandardMessageCodec {
         return ActiveGeofence.decode(readValue(buffer)!);
       case 137:
         return GeofenceCallbackParams.decode(readValue(buffer)!);
+      case 138:
+        return ForegroundServiceConfiguration.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -525,7 +581,9 @@ class NativeGeofenceApi {
 
   final String pigeonVar_messageChannelSuffix;
 
-  Future<void> initialize({required int callbackDispatcherHandle}) async {
+  Future<void> initialize(
+      {required int callbackDispatcherHandle,
+      ForegroundServiceConfiguration? foregroundServiceConfig}) async {
     final String pigeonVar_channelName =
         'dev.flutter.pigeon.native_geofence.NativeGeofenceApi.initialize$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel =
@@ -534,8 +592,8 @@ class NativeGeofenceApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture =
-        pigeonVar_channel.send(<Object?>[callbackDispatcherHandle]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel
+        .send(<Object?>[callbackDispatcherHandle, foregroundServiceConfig]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {

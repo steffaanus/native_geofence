@@ -41,7 +41,12 @@ class MyAppState extends State<MyApp> {
 
   Future<void> initPlatformState() async {
     debugPrint('Initializing...');
-    await NativeGeofenceManager.instance.initialize();
+    await NativeGeofenceManager.instance.initialize(
+      foregroundServiceConfig: ForegroundServiceConfiguration(
+        notificationTitle: 'Locatie bewaking actief',
+        notificationText: 'We controleren je locatie voor geofence gebeurtenissen',
+      ),
+    );
     debugPrint('Initialization done');
   }
 

@@ -2,9 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import 'package:native_geofence/src/generated/platform_bindings.g.dart';
 import 'package:native_geofence/src/model/native_geofence_exception.dart';
 import 'package:native_geofence/src/typedefs.dart';
+
+import '../generated/native_geofence_api.g.dart';
 
 class NativeGeofenceTriggerImpl implements NativeGeofenceTriggerApi {
   /// Cached instance of [NativeGeofenceTriggerImpl]
