@@ -44,7 +44,8 @@ class MyAppState extends State<MyApp> {
     await NativeGeofenceManager.instance.initialize(
       foregroundServiceConfig: ForegroundServiceConfiguration(
         notificationTitle: 'Locatie bewaking actief',
-        notificationText: 'We controleren je locatie voor geofence gebeurtenissen',
+        notificationText:
+            'We controleren je locatie voor geofence gebeurtenissen',
       ),
     );
     debugPrint('Initialization done');
