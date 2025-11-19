@@ -25,23 +25,4 @@ class NativeGeofenceServiceApiImpl(
         Log.d(TAG, "Trigger API initialized, notifying service")
         service.triggerApiReady()
     }
-
-    /**
-     * Called by Dart to promote to foreground service.
-     * Since we're already running as a foreground service, this is a no-op.
-     */
-    override fun promoteToForeground() {
-        Log.d(TAG, "promoteToForeground called, but already running as foreground service")
-        // No-op: already in foreground
-    }
-
-    /**
-     * Called by Dart to demote to background.
-     * This is interpreted as a request to stop the service after processing completes.
-     */
-    override fun demoteToBackground() {
-        Log.d(TAG, "demoteToBackground called - service will stop after current event")
-        // The service will automatically stop after processing all events in the queue
-        // No explicit action needed here as the service manages its own lifecycle
-    }
 }

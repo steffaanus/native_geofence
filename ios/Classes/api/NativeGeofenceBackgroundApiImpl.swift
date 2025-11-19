@@ -51,10 +51,6 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         processQueue()
     }
     
-    func demoteToBackground() throws {
-        log.info("demoteToBackground called. iOS does not distinguish between foreground and background, nothing to do here.")
-    }
-    
     private func processQueue() {
         objc_sync_enter(self)
         defer { objc_sync_exit(self) }

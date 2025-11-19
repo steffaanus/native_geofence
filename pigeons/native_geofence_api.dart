@@ -180,10 +180,6 @@ abstract class NativeGeofenceApi {
 @HostApi()
 abstract class NativeGeofenceBackgroundApi {
   void triggerApiInitialized();
-
-  void promoteToForeground();
-
-  void demoteToBackground();
 }
 
 @FlutterApi()

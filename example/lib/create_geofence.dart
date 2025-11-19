@@ -37,8 +37,8 @@ class CreateGeofenceState extends State<CreateGeofence> {
           initialTriggers: [GeofenceEvent.enter],
           loiteringDelayMillis: 1000,
         ),
-        callbackHandle: PluginUtilities.getCallbackHandle(geofenceTriggered)!.toRawHandle()
-    );
+        callbackHandle: PluginUtilities.getCallbackHandle(geofenceTriggered)!
+            .toRawHandle());
     _updateRegisteredGeofences();
   }
 
@@ -64,8 +64,9 @@ class CreateGeofenceState extends State<CreateGeofence> {
                       triggers: data.triggers,
                       iosSettings: data.iosSettings,
                       androidSettings: data.androidSettings,
-                      callbackHandle: PluginUtilities.getCallbackHandle(geofenceTriggered)!.toRawHandle()
-                  )),
+                      callbackHandle:
+                          PluginUtilities.getCallbackHandle(geofenceTriggered)!
+                              .toRawHandle())),
               SizedBox(height: 16),
               TextFormField(
                 decoration: InputDecoration(labelText: 'Latitude'),
@@ -80,8 +81,9 @@ class CreateGeofenceState extends State<CreateGeofence> {
                       triggers: data.triggers,
                       iosSettings: data.iosSettings,
                       androidSettings: data.androidSettings,
-                    callbackHandle: PluginUtilities.getCallbackHandle(geofenceTriggered)!.toRawHandle()
-                  );
+                      callbackHandle:
+                          PluginUtilities.getCallbackHandle(geofenceTriggered)!
+                              .toRawHandle());
                 },
               ),
               SizedBox(height: 10),
@@ -98,8 +100,9 @@ class CreateGeofenceState extends State<CreateGeofence> {
                       triggers: data.triggers,
                       iosSettings: data.iosSettings,
                       androidSettings: data.androidSettings,
-                      callbackHandle: PluginUtilities.getCallbackHandle(geofenceTriggered)!.toRawHandle()
-                  );
+                      callbackHandle:
+                          PluginUtilities.getCallbackHandle(geofenceTriggered)!
+                              .toRawHandle());
                 },
               ),
               SizedBox(height: 16),
@@ -114,8 +117,9 @@ class CreateGeofenceState extends State<CreateGeofence> {
                       triggers: data.triggers,
                       iosSettings: data.iosSettings,
                       androidSettings: data.androidSettings,
-                      callbackHandle: PluginUtilities.getCallbackHandle(geofenceTriggered)!.toRawHandle()
-                  );
+                      callbackHandle:
+                          PluginUtilities.getCallbackHandle(geofenceTriggered)!
+                              .toRawHandle());
                 },
               ),
               SizedBox(height: 22),

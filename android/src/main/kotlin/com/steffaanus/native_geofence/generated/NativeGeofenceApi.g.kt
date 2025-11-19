@@ -609,8 +609,6 @@ interface NativeGeofenceApi {
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface NativeGeofenceBackgroundApi {
   fun triggerApiInitialized()
-  fun promoteToForeground()
-  fun demoteToBackground()
 
   companion object {
     /** The codec used by NativeGeofenceBackgroundApi. */
@@ -627,38 +625,6 @@ interface NativeGeofenceBackgroundApi {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               api.triggerApiInitialized()
-              listOf(null)
-            } catch (exception: Throwable) {
-              NativeGeofenceApiPigeonUtils.wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.native_geofence.NativeGeofenceBackgroundApi.promoteToForeground$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { _, reply ->
-            val wrapped: List<Any?> = try {
-              api.promoteToForeground()
-              listOf(null)
-            } catch (exception: Throwable) {
-              NativeGeofenceApiPigeonUtils.wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.native_geofence.NativeGeofenceBackgroundApi.demoteToBackground$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { _, reply ->
-            val wrapped: List<Any?> = try {
-              api.demoteToBackground()
               listOf(null)
             } catch (exception: Throwable) {
               NativeGeofenceApiPigeonUtils.wrapError(exception)
