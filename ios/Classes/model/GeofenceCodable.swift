@@ -168,3 +168,79 @@ extension Geofence: Codable {
         try container.encode(callbackHandle, forKey: .callbackHandle)
     }
 }
+
+// MARK: - ActiveGeofence
+
+extension ActiveGeofence: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id
+        case location
+        case radiusMeters
+        case triggers
+        case androidSettings
+        case status
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decode(String.self, forKey: .id)
+        let location = try container.decode(Location.self, forKey: .location)
+        let radiusMeters = try container.decode(Double.self, forKey: .radiusMeters)
+        let triggers = try container.decode([GeofenceEvent].self, forKey: .triggers)
+        let androidSettings = try container.decodeIfPresent(AndroidGeofenceSettings.self, forKey: .androidSettings)
+        let status = try container.decode(GeofenceStatus.self, forKey: .status)
+        
+        self.init(
+            id: id,
+            location: location,
+            radiusMeters: radiusMeters,
+            triggers: triggers,
+            androidSettings: androidSettings,
+            status: status
+        )
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(location, forKey: .location)
+        try container.encode(radiusMeters, forKey: .radiusMeters)
+        try container.encode(triggers, forKey: .triggers)
+        try container.encodeIfPresent(androidSettings, forKey: .androidSettings)
+        try container.encode(status, forKey: .status)
+    }
+}
+
+// MARK: - GeofenceCallbackParams
+
+extension GeofenceCallbackParams: Codable {
+    enum CodingKeys: String, CodingKey {
+        case geofences
+        case event
+        case location
+        case callbackHandle
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let geofences = try container.decode([ActiveGeofence?].self, forKey: .geofences)
+        let event = try container.decode(GeofenceEvent.self, forKey: .event)
+        let location = try container.decodeIfPresent(Location.self, forKey: .location)
+        let callbackHandle = try container.decode(Int64.self, forKey: .callbackHandle)
+        
+        self.init(
+            geofences: geofences,
+            event: event,
+            location: location,
+            callbackHandle: callbackHandle
+        )
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(geofences, forKey: .geofences)
+        try container.encode(event, forKey: .event)
+        try container.encodeIfPresent(location, forKey: .location)
+        try container.encode(callbackHandle, forKey: .callbackHandle)
+    }
+}

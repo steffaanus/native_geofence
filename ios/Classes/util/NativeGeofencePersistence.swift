@@ -54,6 +54,8 @@ class NativeGeofencePersistence {
         do {
             let data = try JSONEncoder().encode(geofences)
             persistentState.set(data, forKey: geofencesKey)
+            persistentState.synchronize()  // Force immediate write to disk
+            log.debug("Geofences persisted to disk")
         } catch {
             log.error("Error encoding geofences: \(error)")
         }
@@ -66,6 +68,9 @@ class NativeGeofencePersistence {
             NSNumber(value: handle),
             forKey: Constants.CALLBACK_DISPATCHER_KEY
         )
+
+        persistentState.synchronize()  // CRITICAL - ensures handle is saved before app might crash
+        log.debug("Callback dispatcher handle saved")
     }
     
     static func getCallbackDispatcherHandle() -> Int64? {
