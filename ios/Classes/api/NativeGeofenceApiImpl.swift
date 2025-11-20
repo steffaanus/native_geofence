@@ -84,6 +84,17 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
     }
     
     func createGeofence(geofence: Geofence, completion: @escaping (Result<Void, any Error>) -> Void) {
+        let currentCount = locationManagerDelegate.locationManager.monitoredRegions.count
+        if currentCount >= 20 {
+            let error = NSError(
+                domain: Constants.PACKAGE_NAME,
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "iOS limits apps to 20 geofences. Currently: \(currentCount)"]
+            )
+            completion(.failure(error))
+            return
+        }
+
         let region = CLCircularRegion(
             center: CLLocationCoordinate2DMake(geofence.location.latitude, geofence.location.longitude),
             radius: geofence.radiusMeters,

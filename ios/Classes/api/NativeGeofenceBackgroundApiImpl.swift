@@ -8,6 +8,7 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
     private let binaryMessenger: FlutterBinaryMessenger
     
     private var eventQueue: [GeofenceCallbackParams] = .init()
+    private let maxQueueSize = 100
     private var isClosed: Bool = false
     private var nativeGeoFenceTriggerApi: NativeGeofenceTriggerApi? = nil
     
@@ -20,11 +21,17 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
     
     func geofenceTriggered(params: GeofenceCallbackParams, completion: @escaping (Result<Void, Error>) -> Void) {
         objc_sync_enter(self)
-        
+        if eventQueue.count >= maxQueueSize {
+            log.warning("Queue full. Dropping oldest event.")
+            eventQueue.removeFirst()
+        }
+
         eventQueue.append(params)
-        
         objc_sync_exit(self)
-        
+
+        // CRITICAL: Always call completion immediately
+        completion(.success(()))
+
         guard let nativeGeoFenceTriggerApi else {
             log.debug("Waiting for NativeGeofenceTriggerApi to become available...")
             return

@@ -48,9 +48,11 @@ class EngineManager {
             self.lock.lock()
             self.backgroundApi = api
             self.log.debug("NativeGeofenceBackgroundApi is ready.")
-            // Execute the completion handler now that the background API is fully initialized.
-            completion?()
+            let localCompletion = completion
             self.lock.unlock()
+
+            // Execute the completion handler now that the background API is fully initialized.
+            localCompletion?()
         }
 
         NativeGeofenceBackgroundApiSetup.setUp(binaryMessenger: headlessEngine!.binaryMessenger, api: api)

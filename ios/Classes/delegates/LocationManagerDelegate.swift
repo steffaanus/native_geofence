@@ -6,26 +6,25 @@ import OSLog
 class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     // Prevent multiple instances of CLLocationManager to avoid duplicate triggers.
     private static var sharedLocationManager: CLLocationManager?
-    
     private let log = Logger(subsystem: Constants.PACKAGE_NAME, category: "LocationManagerDelegate")
-    
+
     let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
     let locationManager: CLLocationManager
-    
+
     init(flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?) {
         self.flutterPluginRegistrantCallback = flutterPluginRegistrantCallback
         locationManager = LocationManagerDelegate.sharedLocationManager ?? CLLocationManager()
         LocationManagerDelegate.sharedLocationManager = locationManager
-        
+
         super.init()
         locationManager.delegate = self
-        
+
         log.debug("LocationManagerDelegate created with instance ID=\(Int.random(in: 1 ... 1000000)).")
     }
-    
+
     func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
         log.debug("didDetermineState: \(String(describing: state)) for geofence ID: \(region.identifier)")
-        
+
         guard let event: GeofenceEvent = switch state {
         case .unknown: nil
         case .inside: .enter
@@ -34,7 +33,22 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
             log.error("Unknown CLRegionState: \(String(describing: state))")
             return
         }
-        
+
+        handleRegionEvent(region: region, event: event)
+    }
+
+    // New handlers for didEnterRegion and didExitRegion
+    func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
+        log.debug("didEnterRegion: \(region.identifier)")
+        handleRegionEvent(region: region, event: .enter)
+    }
+
+    func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
+        log.debug("didExitRegion: \(region.identifier)")
+        handleRegionEvent(region: region, event: .exit)
+    }
+
+    private func handleRegionEvent(region: CLRegion, event: GeofenceEvent) {
         guard let activeGeofence = ActiveGeofenceWires.fromRegion(region) else {
             log.error("Unknown CLRegion type: \(String(describing: type(of: region)))")
             return
@@ -51,7 +65,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         }
 
         let params = GeofenceCallbackParams(geofences: [activeGeofence], event: event, location: nil, callbackHandle: geofence.callbackHandle)
-        
+
         // If the engine is not running, start it and then send the event.
         // This handles cases where the app was terminated and restarted by the system.
         if EngineManager.shared.getBackgroundApi() == nil {
@@ -69,7 +83,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
             sendGeofenceEvent(params: params, activeGeofence: activeGeofence)
         }
     }
-    
+
     private func sendGeofenceEvent(params: GeofenceCallbackParams, activeGeofence: ActiveGeofence) {
         guard let backgroundApi = EngineManager.shared.getBackgroundApi() else {
             log.error("Failed to get background API even after engine start. Aborting.")
@@ -86,7 +100,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         }
         log.debug("Geofence trigger event sent for \(activeGeofence.id).")
     }
-    
+
     func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: any Error) {
         log.error("monitoringDidFailFor: \(region?.identifier ?? "nil") withError: \(error)")
     }
