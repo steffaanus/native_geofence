@@ -1,5 +1,3 @@
-
-
 import '../generated/native_geofence_api.g.dart';
 
 class NativeGeofenceException implements Exception {
