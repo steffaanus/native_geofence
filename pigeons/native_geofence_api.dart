@@ -121,9 +121,15 @@ class ForegroundServiceConfiguration {
   final String notificationTitle;
   final String notificationText;
 
+  /// The name of the icon resource to use for the notification.
+  /// Should match a mipmap or drawable resource in your app (e.g., 'ic_launcher').
+  /// If not provided, defaults to 'ic_launcher'.
+  final String? notificationIconName;
+
   ForegroundServiceConfiguration({
     required this.notificationTitle,
     required this.notificationText,
+    this.notificationIconName,
   });
 }
 

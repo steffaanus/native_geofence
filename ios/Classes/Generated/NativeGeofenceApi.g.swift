@@ -418,22 +418,29 @@ struct GeofenceCallbackParams: Hashable {
 struct ForegroundServiceConfiguration: Hashable {
   var notificationTitle: String
   var notificationText: String
+  /// The name of the icon resource to use for the notification.
+  /// Should match a mipmap or drawable resource in your app (e.g., 'ic_launcher').
+  /// If not provided, defaults to 'ic_launcher'.
+  var notificationIconName: String? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> ForegroundServiceConfiguration? {
     let notificationTitle = pigeonVar_list[0] as! String
     let notificationText = pigeonVar_list[1] as! String
+    let notificationIconName: String? = nilOrValue(pigeonVar_list[2])
 
     return ForegroundServiceConfiguration(
       notificationTitle: notificationTitle,
-      notificationText: notificationText
+      notificationText: notificationText,
+      notificationIconName: notificationIconName
     )
   }
   func toList() -> [Any?] {
     return [
       notificationTitle,
       notificationText,
+      notificationIconName,
     ]
   }
   static func == (lhs: ForegroundServiceConfiguration, rhs: ForegroundServiceConfiguration) -> Bool {

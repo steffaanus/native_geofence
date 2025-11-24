@@ -26,9 +26,6 @@ class Notifications {
                 NotificationManager.IMPORTANCE_LOW
             )
 
-            @SuppressLint("DiscouragedApi") // Can't use R syntax in Flutter plugin.
-            val imageId = context.resources.getIdentifier("ic_launcher", "mipmap", context.packageName)
-
             // Read notification configuration from SharedPreferences
             val prefs = context.getSharedPreferences(Constants.SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
             val title = prefs.getString(
@@ -40,6 +37,14 @@ class Notifications {
                 Constants.FOREGROUND_NOTIFICATION_TEXT_KEY,
                 Constants.DEFAULT_NOTIFICATION_TEXT
             ) ?: Constants.DEFAULT_NOTIFICATION_TEXT
+            
+            val iconName = prefs.getString(
+                Constants.FOREGROUND_NOTIFICATION_ICON_KEY,
+                Constants.DEFAULT_NOTIFICATION_ICON
+            ) ?: Constants.DEFAULT_NOTIFICATION_ICON
+
+            @SuppressLint("DiscouragedApi") // Can't use R syntax in Flutter plugin.
+            val imageId = context.resources.getIdentifier(iconName, "mipmap", context.packageName)
 
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(
                 channel

@@ -398,20 +398,28 @@ data class GeofenceCallbackParams (
  */
 data class ForegroundServiceConfiguration (
   val notificationTitle: String,
-  val notificationText: String
+  val notificationText: String,
+  /**
+   * The name of the icon resource to use for the notification.
+   * Should match a mipmap or drawable resource in your app (e.g., 'ic_launcher').
+   * If not provided, defaults to 'ic_launcher'.
+   */
+  val notificationIconName: String? = null
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): ForegroundServiceConfiguration {
       val notificationTitle = pigeonVar_list[0] as String
       val notificationText = pigeonVar_list[1] as String
-      return ForegroundServiceConfiguration(notificationTitle, notificationText)
+      val notificationIconName = pigeonVar_list[2] as String?
+      return ForegroundServiceConfiguration(notificationTitle, notificationText, notificationIconName)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       notificationTitle,
       notificationText,
+      notificationIconName,
     )
   }
   override fun equals(other: Any?): Boolean {

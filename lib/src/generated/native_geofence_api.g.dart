@@ -449,16 +449,23 @@ class ForegroundServiceConfiguration {
   ForegroundServiceConfiguration({
     required this.notificationTitle,
     required this.notificationText,
+    this.notificationIconName,
   });
 
   String notificationTitle;
 
   String notificationText;
 
+  /// The name of the icon resource to use for the notification.
+  /// Should match a mipmap or drawable resource in your app (e.g., 'ic_launcher').
+  /// If not provided, defaults to 'ic_launcher'.
+  String? notificationIconName;
+
   List<Object?> _toList() {
     return <Object?>[
       notificationTitle,
       notificationText,
+      notificationIconName,
     ];
   }
 
@@ -471,6 +478,7 @@ class ForegroundServiceConfiguration {
     return ForegroundServiceConfiguration(
       notificationTitle: result[0]! as String,
       notificationText: result[1]! as String,
+      notificationIconName: result[2] as String?,
     );
   }
 

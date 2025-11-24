@@ -23,9 +23,11 @@ class Constants {
         
         const val FOREGROUND_NOTIFICATION_TITLE_KEY = "$PACKAGE_NAME.notification_title"
         const val FOREGROUND_NOTIFICATION_TEXT_KEY = "$PACKAGE_NAME.notification_text"
+        const val FOREGROUND_NOTIFICATION_ICON_KEY = "$PACKAGE_NAME.notification_icon"
         
         // Default values for foreground service notification
         const val DEFAULT_NOTIFICATION_TITLE = "Processing geofence event."
         const val DEFAULT_NOTIFICATION_TEXT = "We noticed you are near a key location and are checking if we can help."
+        const val DEFAULT_NOTIFICATION_ICON = "ic_launcher"
     }
 }

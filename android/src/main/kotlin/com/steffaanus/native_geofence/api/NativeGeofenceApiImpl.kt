@@ -47,6 +47,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         if (foregroundServiceConfig != null) {
             editor.putString(Constants.FOREGROUND_NOTIFICATION_TITLE_KEY, foregroundServiceConfig.notificationTitle)
             editor.putString(Constants.FOREGROUND_NOTIFICATION_TEXT_KEY, foregroundServiceConfig.notificationText)
+            editor.putString(Constants.FOREGROUND_NOTIFICATION_ICON_KEY, foregroundServiceConfig.notificationIconName ?: Constants.DEFAULT_NOTIFICATION_ICON)
             Log.d(TAG, "Stored foreground service notification configuration")
         }
         

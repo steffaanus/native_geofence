@@ -166,6 +166,22 @@ Before accesing any methods ensure you initialize the plugin:
 await NativeGeofenceManager.instance.initialize();
 ```
 
+#### [Android only] Customize foreground service notification
+
+You can optionally customize the notification shown when the foreground service processes geofence events:
+
+```dart
+await NativeGeofenceManager.instance.initialize(
+  foregroundServiceConfig: ForegroundServiceConfiguration(
+    notificationTitle: 'Tracking location',
+    notificationText: 'Your app is monitoring geofence events',
+    notificationIconName: 'app_icon', // optional, defaults to 'ic_launcher'
+  ),
+);
+```
+
+The `notificationIconName` should match a mipmap or drawable resource in your Android app's resources. If not specified, it defaults to `'ic_launcher'`. This allows your app to use its own icon instead of the default launcher icon.
+
 ### Obtain permissions
 
 This plugin does not deal with obtaining permissions from the user. Please use a 3rd party plugin, such as [permission_handler](https://pub.dev/packages/permission_handler) for that.
@@ -296,7 +312,6 @@ Pull requests are welcome.
 
 ### Future work
 
-* **Android:** Allow customizing the notification shown when a geofence callback upgrades to a foreground service.
 * **Android:** Allow customizing the wake lock duration when foreground service is launched.
 * Other ideas?
 
