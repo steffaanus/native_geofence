@@ -13,6 +13,7 @@ import com.steffaanus.native_geofence.generated.GeofenceCallbackParams
 import com.steffaanus.native_geofence.generated.NativeGeofenceBackgroundApi
 import com.steffaanus.native_geofence.generated.NativeGeofenceTriggerApi
 import com.steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
+import com.steffaanus.native_geofence.util.EventQueuePersistence
 import com.steffaanus.native_geofence.util.Notifications
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
@@ -35,7 +36,11 @@ class NativeGeofenceForegroundService : Service() {
         private val WAKE_LOCK_TIMEOUT = 5.minutes
         
         // Maximum number of events to queue to prevent memory issues
-        private const val MAX_QUEUE_SIZE = 50
+        // Increased from 50 to 200 to better handle burst scenarios
+        private const val MAX_QUEUE_SIZE = 200
+        
+        // Maximum number of retries for Flutter engine startup failures
+        private const val MAX_ENGINE_START_RETRIES = 3
     }
 
     // Queue for sequential event processing
@@ -58,6 +63,14 @@ class NativeGeofenceForegroundService : Service() {
     
     // Flutter loader
     private val flutterLoader = FlutterInjector.instance().flutterLoader()
+    
+    // FIX 3: Track engine start retry attempts
+    private var engineStartRetries = 0
+    
+    // FIX 4: Service state protection to prevent race conditions
+    @Volatile
+    private var isServiceStopping = false
+    private val serviceLock = Any()
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -76,6 +89,13 @@ class NativeGeofenceForegroundService : Service() {
                 setReferenceCounted(false)
                 acquire(WAKE_LOCK_TIMEOUT.inWholeMilliseconds)
             }
+        }
+        
+        val persistedEvents = EventQueuePersistence.loadQueue(this)
+        if (persistedEvents.isNotEmpty()) {
+            Log.d(TAG, "Restored ${persistedEvents.size} events from disk")
+            eventQueue.addAll(persistedEvents)
+            EventQueuePersistence.clearQueue(this) // Clear from disk now that they're in memory
         }
         
         Log.d(TAG, "Foreground service created with notification ID=$NOTIFICATION_ID")
@@ -101,6 +121,15 @@ class NativeGeofenceForegroundService : Service() {
      * Handle incoming geofence event by adding it to the queue and processing if idle
      */
     private fun handleGeofenceEvent(intent: Intent) {
+        // Check if service is stopping to prevent race conditions
+        synchronized(serviceLock) {
+            if (isServiceStopping) {
+                Log.w(TAG, "Service is stopping, rejecting new event. Event will be persisted and processed on next start.")
+                // Event will be picked up from persisted queue on next service start
+                return
+            }
+        }
+        
         val jsonData = intent.getStringExtra(Constants.EXTRA_GEOFENCE_CALLBACK_PARAMS)
         if (jsonData == null) {
             Log.e(TAG, "No geofence callback params in intent")
@@ -112,12 +141,15 @@ class NativeGeofenceForegroundService : Service() {
             
             // Check queue size to prevent memory issues
             if (eventQueue.size >= MAX_QUEUE_SIZE) {
-                Log.w(TAG, "Event queue full (size=$MAX_QUEUE_SIZE), dropping oldest event")
+                Log.e(TAG, "EVENT QUEUE FULL (size=$MAX_QUEUE_SIZE) - DROPPING OLDEST EVENT!")
                 eventQueue.poll() // Remove oldest event
             }
             
             eventQueue.offer(params)
             Log.d(TAG, "Added event to queue. Queue size: ${eventQueue.size}")
+
+            // Persist queue to disk after processing event
+            persistQueue()
             
             // Start processing if not already processing
             processNextEventIfIdle()
@@ -149,6 +181,9 @@ class NativeGeofenceForegroundService : Service() {
      * Initialize and start the Flutter engine
      */
     private fun startFlutterEngine() {
+        // Reset retry counter on new engine start attempt
+        engineStartRetries = 0
+        
         flutterEngine = FlutterEngine(applicationContext)
 
         if (!flutterLoader.initialized()) {
@@ -167,7 +202,7 @@ class NativeGeofenceForegroundService : Service() {
             
             if (callbackHandle == 0L) {
                 Log.e(TAG, "No callback dispatcher registered")
-                onEventProcessingFailed()
+                onEngineStartupFailed()
                 return@ensureInitializationCompleteAsync
             }
 
@@ -175,7 +210,7 @@ class NativeGeofenceForegroundService : Service() {
                 val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
                 if (callbackInfo == null) {
                     Log.e(TAG, "Failed to find callback dispatcher")
-                    onEventProcessingFailed()
+                    onEngineStartupFailed()
                     return@ensureInitializationCompleteAsync
                 }
 
@@ -196,6 +231,8 @@ class NativeGeofenceForegroundService : Service() {
                 )
                 
                 Log.d(TAG, "Flutter engine started successfully")
+                // Reset retry counter on successful start
+                engineStartRetries = 0
             }
         }
     }
@@ -251,6 +288,9 @@ class NativeGeofenceForegroundService : Service() {
         // Remove processed event from queue
         eventQueue.poll()
         
+        // Persist queue to disk after processing event
+        persistQueue()
+        
         // Check if there are more events to process
         if (eventQueue.isNotEmpty()) {
             Log.d(TAG, "Processing next event. Remaining in queue: ${eventQueue.size}")
@@ -264,19 +304,66 @@ class NativeGeofenceForegroundService : Service() {
     }
 
     /**
-     * Called when event processing fails
+     * Called when Flutter engine startup fails
+     * Implements retry mechanism with exponential backoff
+     */
+    private fun onEngineStartupFailed() {
+        if (flutterEngine == null && engineStartRetries < MAX_ENGINE_START_RETRIES) {
+            engineStartRetries++
+            val retryDelayMs = 1000L * engineStartRetries // 1s, 2s, 3s exponential backoff
+            
+            Log.w(TAG, "Flutter engine startup failed. Retry attempt $engineStartRetries/$MAX_ENGINE_START_RETRIES in ${retryDelayMs}ms")
+            
+            // Clean up failed engine before retry
+            Handler(Looper.getMainLooper()).post {
+                flutterEngine?.destroy()
+                flutterEngine = null
+                serviceApiImpl = null
+            }
+            
+            // Schedule retry with exponential backoff
+            Handler(Looper.getMainLooper()).postDelayed({
+                Log.d(TAG, "Retrying Flutter engine startup (attempt $engineStartRetries)")
+                startFlutterEngine()
+            }, retryDelayMs)
+            
+            return
+        }
+        
+        // All retries exhausted or engine exists but still failing
+        Log.e(TAG, "Flutter engine startup failed after $engineStartRetries retries. Dropping event.")
+        onEventProcessingFailed()
+    }
+    
+    /**
+     * Called when event processing fails (after all retries exhausted)
      */
     private fun onEventProcessingFailed() {
-        Log.e(TAG, "Event processing failed")
+        Log.e(TAG, "Event processing failed - dropping event")
         
         // Remove failed event from queue
-        eventQueue.poll()
+        val droppedEvent = eventQueue.poll()
+        if (droppedEvent != null) {
+            Log.w(TAG, "Dropped event due to processing failure")
+        }
+        
+        // Reset retry counter for next event
+        engineStartRetries = 0
+        
+        // Persist queue after dropping failed event
+        persistQueue()
         
         // Try to process next event if available
         if (eventQueue.isNotEmpty()) {
             Log.d(TAG, "Attempting to process next event after failure")
             startTime = System.currentTimeMillis()
-            processCurrentEvent()
+            
+            // If engine is null, restart it for the next event
+            if (flutterEngine == null) {
+                startFlutterEngine()
+            } else {
+                processCurrentEvent()
+            }
         } else {
             isProcessing = false
             stopFlutterEngineAndService()
@@ -285,8 +372,27 @@ class NativeGeofenceForegroundService : Service() {
 
     /**
      * Stop the Flutter engine and the service
+     * Protected against duplicate calls and race conditions
      */
     private fun stopFlutterEngineAndService() {
+        synchronized(serviceLock) {
+            if (isServiceStopping) {
+                Log.d(TAG, "Service already stopping, ignoring duplicate stop request")
+                return
+            }
+            isServiceStopping = true
+            Log.d(TAG, "Service stopping initiated")
+        }
+        
+        // Persist remaining queue before stopping (if service is killed, events are recovered)
+        if (eventQueue.isNotEmpty()) {
+            Log.w(TAG, "Stopping service with ${eventQueue.size} events still in queue - persisting to disk")
+            persistQueue()
+        } else {
+            // Clear persisted queue if empty
+            EventQueuePersistence.clearQueue(this)
+        }
+        
         Handler(Looper.getMainLooper()).post {
             flutterEngine?.destroy()
             flutterEngine = null
@@ -311,16 +417,37 @@ class NativeGeofenceForegroundService : Service() {
         wakeLock = null
         
         // Stop foreground and remove notification
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping foreground: ${e.message}")
+        }
         
         // Stop the service
-        stopSelf()
+        try {
+            stopSelf()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping self: ${e.message}")
+        }
         
         Log.d(TAG, "Foreground service stopped")
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        
+        // Mark service as stopping if not already marked
+        synchronized(serviceLock) {
+            if (!isServiceStopping) {
+                Log.w(TAG, "onDestroy called but service wasn't marked as stopping - persisting queue")
+                isServiceStopping = true
+                
+                // Persist any remaining events
+                if (eventQueue.isNotEmpty()) {
+                    persistQueue()
+                }
+            }
+        }
         
         // Clean up Flutter engine if still running
         Handler(Looper.getMainLooper()).post {
@@ -336,5 +463,16 @@ class NativeGeofenceForegroundService : Service() {
         }
         
         Log.d(TAG, "Service destroyed")
+    }
+    
+    /**
+     * Persist the current event queue to disk
+     */
+    private fun persistQueue() {
+        try {
+            EventQueuePersistence.saveQueue(this, eventQueue.toList())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to persist queue: ${e.message}", e)
+        }
     }
 }

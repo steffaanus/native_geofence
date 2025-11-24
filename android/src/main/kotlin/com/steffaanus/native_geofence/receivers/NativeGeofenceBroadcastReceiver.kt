@@ -116,24 +116,25 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             return null
         }
 
-        val geofence =
-            geofencingEvent.triggeringGeofences?.firstNotNullOfOrNull {
-                NativeGeofencePersistence.getGeofence(
-                    context,
-                    it.requestId
-                )
-            }
+        // CRITICAL FIX: Process ALL triggering geofences, not just the first one
+        val geofences = geofencingEvent.triggeringGeofences?.mapNotNull { triggeredGeofence ->
+            NativeGeofencePersistence.getGeofence(context, triggeredGeofence.requestId)
+        } ?: emptyList()
 
-        if (geofence == null) {
-            Log.e(TAG, "No geofence found for triggering geofences.")
+        if (geofences.isEmpty()) {
+            Log.e(TAG, "No geofences found for triggering geofences.")
             return null
         }
 
-        // Update geofence status to ACTIVE now that we've confirmed it's actually working
-        if (geofence.status != GeofenceStatus.ACTIVE) {
-            geofence.status = GeofenceStatus.ACTIVE
-            NativeGeofencePersistence.saveOrUpdateGeofence(context, geofence)
-            Log.d(TAG, "Updated Geofence ID=${geofence.id} status to ACTIVE after receiving event.")
+        Log.d(TAG, "Processing ${geofences.size} triggered geofence(s)")
+
+        // Update all geofence statuses to ACTIVE now that we've confirmed they're actually working
+        geofences.forEach { geofence ->
+            if (geofence.status != GeofenceStatus.ACTIVE) {
+                geofence.status = GeofenceStatus.ACTIVE
+                NativeGeofencePersistence.saveOrUpdateGeofence(context, geofence)
+                Log.d(TAG, "Updated Geofence ID=${geofence.id} status to ACTIVE after receiving event.")
+            }
         }
 
         val location = geofencingEvent.triggeringLocation
@@ -141,12 +142,11 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             Log.w(TAG, "No triggering location found.")
         }
 
-        // val callbackHandle = intent.getLongExtra(Constants.CALLBACK_HANDLE_KEY, 0L)
-        // Callback handle komt uit de geofence storage, niet uit de Intent
-        val callbackHandle = geofence.callbackHandle
+        // Use the callback handle from the first geofence (they should all have the same dispatcher)
+        val callbackHandle = geofences.first().callbackHandle
 
         return GeofenceCallbackParams(
-            geofences = listOf(geofence.toActiveGeofence()),
+            geofences = geofences.map { it.toActiveGeofence() },
             event = geofenceEvent,
             location = location?.let {
                 com.steffaanus.native_geofence.generated.Location(
