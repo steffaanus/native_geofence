@@ -1,3 +1,17 @@
+## 2.3.0
+
+*   **Fix (iOS):** Implemented proper background task management using `UIApplication.beginBackgroundTask` to ensure geofence events are reliably processed in background. This follows Apple's best practices for async work in location delegates. The app now gets guaranteed 30 seconds of background execution time, preventing premature suspension during Flutter callback execution.
+*   **Improvement (iOS):** Refactored `handleRegionEvent()` to return quickly from CLLocationManager delegate methods by processing heavy work asynchronously on a dedicated queue, as recommended by Apple's best practices.
+*   **Improvement (Dart):** Added 20-second timeout to geofence callbacks to prevent infinite hangs and ensure iOS background tasks complete within the allowed time window, even in worst-case scenarios (terminated app restart with slow engine startup). Callbacks that exceed this limit will throw a `TimeoutException`.
+*   **Improvement (Dart):** Added performance monitoring to geofence callbacks. Callbacks taking longer than 5 seconds will log a warning to help developers identify and optimize slow operations.
+
+### Breaking Changes
+*   **None** - This is an internal implementation change. Existing callbacks will automatically benefit from improved reliability and protection against iOS background suspension.
+
+### Migration Notes
+*   **No code changes required** - The changes are transparent to users.
+*   **Callback performance:** While no action is required, we recommend keeping geofence callbacks lightweight (< 5 seconds). Callbacks exceeding 20 seconds will timeout and may be persisted for retry. Consider offloading heavy operations to background services or queues if needed.
+
 ## 2.2.0
 
 *   **Feat (iOS & Android & Dart):** GPS coordinates are now automatically normalized to 6 decimal places (~11cm precision) to ensure cross-platform consistency and match iOS's CLCircularRegion internal precision. This provides optimal precision for geofencing while being realistic for GPS accuracy (±5-10 meters). Existing geofences are automatically migrated - no action required from developers.
