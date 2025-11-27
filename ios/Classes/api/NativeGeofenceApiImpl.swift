@@ -122,6 +122,47 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
         let persistedIds = Set(persistedGeofences.keys)
         let monitoredIds = Set(monitoredRegions.map { $0.identifier })
         
+        // NEW: Check for coordinate mismatches in existing regions
+        // Storage has normalized coordinates (from Dart)
+        // iOS CLRegion has iOS-rounded coordinates
+        // We normalize iOS coordinates to compare
+        var coordinateMismatches = 0
+        for region in monitoredRegions {
+            if let circularRegion = region as? CLCircularRegion,
+               let storedGeofence = persistedGeofences[region.identifier] {
+                
+                // Storage location is ALREADY normalized (came from Dart)
+                let storedLocation = storedGeofence.location
+                
+                // iOS region needs normalization for comparison
+                let regionLocation = Location(
+                    latitude: circularRegion.center.latitude,
+                    longitude: circularRegion.center.longitude
+                ).normalized()
+                
+                // Check if coordinates differ
+                if !storedLocation.equalsNormalized(regionLocation) {
+                    log.warning("Coordinate mismatch for \(region.identifier). Storage: (\(storedLocation.latitude), \(storedLocation.longitude)), iOS: (\(regionLocation.latitude), \(regionLocation.longitude)). Re-syncing...")
+                    // Stop old region
+                    locationManagerDelegate.locationManager.stopMonitoring(for: region)
+                    // Re-create with correct coordinates from storage
+                    let newRegion = CLCircularRegion(
+                        center: CLLocationCoordinate2DMake(
+                            storedLocation.latitude,  // Already normalized
+                            storedLocation.longitude  // Already normalized
+                        ),
+                        radius: storedGeofence.radiusMeters,
+                        identifier: storedGeofence.id
+                    )
+                    newRegion.notifyOnEntry = storedGeofence.triggers.contains(.enter)
+                    newRegion.notifyOnExit = storedGeofence.triggers.contains(.exit)
+                    locationManagerDelegate.locationManager.startMonitoring(for: newRegion)
+                    coordinateMismatches += 1
+                    log.debug("Re-synced geofence \(region.identifier) with corrected coordinates")
+                }
+            }
+        }
+        
         // Geofences that are in persistence but not monitored by the OS
         let toAdd = persistedIds.subtracting(monitoredIds)
         for id in toAdd {
@@ -146,7 +187,7 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
                 log.debug("Synced: Removed orphaned geofence \(region.identifier) from CLLocationManager.")
             }
         }
-        log.debug("Sync complete. \(toAdd.count) added, \(toRemove.count) removed.")
+        log.debug("Sync complete. \(toAdd.count) added, \(toRemove.count) removed, \(coordinateMismatches) coordinate mismatches fixed.")
     }
     
     func getGeofenceIds() throws -> [String] {

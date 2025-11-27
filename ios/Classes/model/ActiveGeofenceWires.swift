@@ -14,12 +14,16 @@ class ActiveGeofenceWires {
 
     static func fromRegion(_ region: CLRegion) -> ActiveGeofence? {
         guard let circularRegion = region as? CLCircularRegion else { return nil }
+        
+        // Normalize coordinates from iOS CLRegion for consistency
+        let normalizedLocation = Location(
+            latitude: circularRegion.center.latitude,
+            longitude: circularRegion.center.longitude
+        ).normalized()
+        
         return ActiveGeofence(
             id: circularRegion.identifier,
-            location: Location(
-                latitude: circularRegion.center.latitude,
-                longitude: circularRegion.center.longitude
-            ),
+            location: normalizedLocation,
             radiusMeters: circularRegion.radius,
             triggers: [
                 circularRegion.notifyOnEntry ? .enter : nil,

@@ -1,3 +1,9 @@
+## 2.2.0
+
+*   **Feat (iOS & Android & Dart):** GPS coordinates are now automatically normalized to 6 decimal places (~11cm precision) to ensure cross-platform consistency and match iOS's CLCircularRegion internal precision. This provides optimal precision for geofencing while being realistic for GPS accuracy (±5-10 meters). Existing geofences are automatically migrated - no action required from developers.
+*   **Fix (iOS):** The `syncGeofences()` method now detects and corrects coordinate mismatches between stored geofences and iOS CLLocationManager. This prevents drift issues where stored coordinates could differ from iOS's internally rounded values.
+*   **Improvement:** Added comprehensive unit tests for coordinate normalization to ensure precision consistency across platforms.
+
 ## 2.1.0
 
 *   **Feat (Android):** Added configurable foreground service notification. Apps can now customize the notification title and text shown when the plugin processes geofence events by passing a `ForegroundServiceConfiguration` to the `initialize()` method. This feature is fully backwards compatible - existing apps will continue to use default notification text.

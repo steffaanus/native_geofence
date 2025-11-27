@@ -193,11 +193,34 @@ As noted in the setup section you will need to obtain the following permissions:
 * `Permission.location`
 * `Permission.locationAlways`: if you want to be notified of geofence events when your app isn't running
 
+### GPS Coordinate Precision
+
+This plugin automatically normalizes GPS coordinates to **6 decimal places** (~11cm precision) to ensure consistency across platforms and match iOS's internal CLCircularRegion precision.
+
+**Why 6 decimals?**
+- **Precision**: ~11.1 cm - more than sufficient for geofencing
+- **Reality**: GPS accuracy is typically ±5-10 meters (much larger than 11cm)
+- **iOS matching**: iOS CLCircularRegion uses 6-7 decimals internally
+- **Efficiency**: Smaller storage and better cross-platform consistency
+
+**Example:**
+```dart
+// Input coordinates with high precision
+Location(latitude: 40.757980123456789, longitude: -73.985540987654321)
+// Automatically normalized to
+Location(latitude: 40.757980, longitude: -73.985541)
+```
+
+**Impact on existing apps:**
+- Existing geofences are automatically migrated when accessed
+- No action required from developers
+- The difference is typically < 1 meter, which is imperceptible for geofencing
+
 ### Create geofence
 
 First, define your geofence parameters using the `Geofence` class, for example:
 
-*Note: The ID must be unqiue. Please see the API reference for details.*
+*Note: The ID must be unique. Please see the API reference for details.*
 
 ```dart
 final zone1 = Geofence(

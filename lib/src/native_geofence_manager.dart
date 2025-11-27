@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:native_geofence/src/callback_dispatcher.dart';
 import 'package:native_geofence/src/generated/native_geofence_api.g.dart';
+import 'package:native_geofence/src/model/location_extension.dart';
 import 'package:native_geofence/src/model/native_geofence_exception.dart';
 import 'package:native_geofence/src/platform/module.dart';
 import 'package:native_geofence/src/typedefs.dart';
@@ -62,6 +63,9 @@ class NativeGeofenceManager {
   /// [callback] is the method to be called when a geofence event associated
   /// with [region] occurs.
   ///
+  /// Coordinates are automatically normalized to 6 decimal places (~11cm precision)
+  /// to ensure cross-platform consistency and match iOS's internal precision.
+  ///
   /// Throws [NativeGeofenceException].
   Future<void> createGeofence(
       Geofence geofence, GeofenceCallback callback) async {
@@ -93,8 +97,20 @@ class NativeGeofenceManager {
       throw NativeGeofenceException.invalidArgument(
           message: 'Callback is invalid.');
     }
+
+    // Normalize coordinates to 6 decimals before sending to native layer
+    final normalizedGeofence = Geofence(
+      id: geofence.id,
+      location: geofence.location.normalized(),
+      radiusMeters: geofence.radiusMeters,
+      triggers: geofence.triggers,
+      iosSettings: geofence.iosSettings,
+      androidSettings: geofence.androidSettings,
+      callbackHandle: geofence.callbackHandle,
+    );
+
     return _api
-        .createGeofence(geofence: geofence)
+        .createGeofence(geofence: normalizedGeofence)
         .catchError(NativeGeofenceExceptionMapper.catchError<void>);
   }
 

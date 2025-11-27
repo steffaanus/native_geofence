@@ -11,6 +11,7 @@ export 'package:native_geofence/src/generated/native_geofence_api.g.dart'
         GeofenceCallbackParams;
 export 'package:native_geofence/src/generated/native_geofence_api.g.dart'
     show ForegroundServiceConfiguration;
+export 'package:native_geofence/src/model/location_extension.dart';
 export 'package:native_geofence/src/model/native_geofence_exception.dart';
 export 'package:native_geofence/src/native_geofence_background_manager.dart'
     show NativeGeofenceBackgroundManager;
