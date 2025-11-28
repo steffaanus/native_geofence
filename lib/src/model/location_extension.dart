@@ -1,4 +1,4 @@
-import '../generated/native_geofence_api.g.dart' show Location;
+import '../generated/native_geofence_api.g.dart' show Location, ActiveGeofence;
 
 /// Extension for Location to provide coordinate normalization
 extension LocationNormalization on Location {
@@ -45,5 +45,47 @@ extension LocationFactory on Location {
       latitude: LocationNormalization._normalize(latitude),
       longitude: LocationNormalization._normalize(longitude),
     );
+  }
+}
+
+/// Extension for ActiveGeofence to compare with normalized parameters
+extension ActiveGeofenceComparison on ActiveGeofence {
+  /// Checks if this geofence matches the given parameters after normalization.
+  ///
+  /// Coordinates are normalized to 6 decimal places before comparison.
+  /// This ensures consistent comparison regardless of input precision.
+  ///
+  /// Parameters:
+  /// - [latitude]: The latitude to compare (will be normalized)
+  /// - [longitude]: The longitude to compare (will be normalized)
+  /// - [radiusMeters]: The radius in meters to compare
+  ///
+  /// Returns true if all parameters match after normalization.
+  ///
+  /// Example:
+  /// ```dart
+  /// final geofence = activeGeofences.first;
+  /// final matches = geofence.isEqual(
+  ///   latitude: 53.164677890945015,
+  ///   longitude: 5.445930351661604,
+  ///   radiusMeters: 100.0,
+  /// );
+  /// ```
+  bool isEqual({
+    required double latitude,
+    required double longitude,
+    required double radiusMeters,
+  }) {
+    // Normalize both input and geofence coordinates
+    final normalizedInputLat = LocationNormalization._normalize(latitude);
+    final normalizedInputLon = LocationNormalization._normalize(longitude);
+    final normalizedGeofenceLat =
+        LocationNormalization._normalize(location.latitude);
+    final normalizedGeofenceLon =
+        LocationNormalization._normalize(location.longitude);
+
+    return normalizedInputLat == normalizedGeofenceLat &&
+        normalizedInputLon == normalizedGeofenceLon &&
+        this.radiusMeters == radiusMeters;
   }
 }

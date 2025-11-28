@@ -162,4 +162,146 @@ void main() {
       expect(location1.equalsNormalized(location2), isFalse);
     });
   });
+
+  group('ActiveGeofence isEqual', () {
+    test('returns true for matching normalized parameters', () {
+      final geofence = ActiveGeofence(
+        id: 'test-1',
+        location: Location(
+          latitude: 53.164678,
+          longitude: 5.445930,
+        ),
+        radiusMeters: 100.0,
+        triggers: [GeofenceEvent.enter],
+        androidSettings: null,
+        status: GeofenceStatus.active,
+      );
+
+      // Test with unnormalized input that normalizes to same values
+      expect(
+        geofence.isEqual(
+          latitude: 53.164677890945015,
+          longitude: 5.445930351661604,
+          radiusMeters: 100.0,
+        ),
+        isTrue,
+      );
+    });
+
+    test('returns false for different latitude', () {
+      final geofence = ActiveGeofence(
+        id: 'test-1',
+        location: Location(
+          latitude: 53.164678,
+          longitude: 5.445930,
+        ),
+        radiusMeters: 100.0,
+        triggers: [GeofenceEvent.enter],
+        androidSettings: null,
+        status: GeofenceStatus.active,
+      );
+
+      expect(
+        geofence.isEqual(
+          latitude: 53.164679, // Different after normalization
+          longitude: 5.445930,
+          radiusMeters: 100.0,
+        ),
+        isFalse,
+      );
+    });
+
+    test('returns false for different longitude', () {
+      final geofence = ActiveGeofence(
+        id: 'test-1',
+        location: Location(
+          latitude: 53.164678,
+          longitude: 5.445930,
+        ),
+        radiusMeters: 100.0,
+        triggers: [GeofenceEvent.enter],
+        androidSettings: null,
+        status: GeofenceStatus.active,
+      );
+
+      expect(
+        geofence.isEqual(
+          latitude: 53.164678,
+          longitude: 5.445931, // Different after normalization
+          radiusMeters: 100.0,
+        ),
+        isFalse,
+      );
+    });
+
+    test('returns false for different radius', () {
+      final geofence = ActiveGeofence(
+        id: 'test-1',
+        location: Location(
+          latitude: 53.164678,
+          longitude: 5.445930,
+        ),
+        radiusMeters: 100.0,
+        triggers: [GeofenceEvent.enter],
+        androidSettings: null,
+        status: GeofenceStatus.active,
+      );
+
+      expect(
+        geofence.isEqual(
+          latitude: 53.164678,
+          longitude: 5.445930,
+          radiusMeters: 200.0, // Different radius
+        ),
+        isFalse,
+      );
+    });
+
+    test('normalizes both geofence and input coordinates', () {
+      final geofence = ActiveGeofence(
+        id: 'test-1',
+        location: Location(
+          latitude: 53.164677890945015, // Unnormalized
+          longitude: 5.445930351661604, // Unnormalized
+        ),
+        radiusMeters: 100.0,
+        triggers: [GeofenceEvent.enter],
+        androidSettings: null,
+        status: GeofenceStatus.active,
+      );
+
+      // Both should normalize to 53.164678 and 5.445930
+      expect(
+        geofence.isEqual(
+          latitude: 53.1646784999,
+          longitude: 5.4459304999,
+          radiusMeters: 100.0,
+        ),
+        isTrue,
+      );
+    });
+
+    test('handles negative coordinates', () {
+      final geofence = ActiveGeofence(
+        id: 'test-1',
+        location: Location(
+          latitude: -33.8688197,
+          longitude: 151.2092955,
+        ),
+        radiusMeters: 50.0,
+        triggers: [GeofenceEvent.enter, GeofenceEvent.exit],
+        androidSettings: null,
+        status: GeofenceStatus.active,
+      );
+
+      expect(
+        geofence.isEqual(
+          latitude: -33.868819712345,
+          longitude: 151.209295687654,
+          radiusMeters: 50.0,
+        ),
+        isTrue,
+      );
+    });
+  });
 }
