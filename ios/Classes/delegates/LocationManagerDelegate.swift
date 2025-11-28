@@ -54,7 +54,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
 
         switch state {
         case .unknown:
-            log.warning("Unknown region state for \(region.identifier). CLRegionState: \(String(describing: state))")
+            log.warning("Unknown region state for region \(region.identifier). CLRegionState: \(String(describing: state))")
             return
         case .inside:
             event = .enter
