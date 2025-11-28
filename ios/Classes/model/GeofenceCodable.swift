@@ -179,6 +179,8 @@ extension ActiveGeofence: Codable {
         case triggers
         case androidSettings
         case status
+        case createdAtMillis
+        case statusChangedAtMillis
     }
     
     public init(from decoder: Decoder) throws {
@@ -190,13 +192,20 @@ extension ActiveGeofence: Codable {
         let androidSettings = try container.decodeIfPresent(AndroidGeofenceSettings.self, forKey: .androidSettings)
         let status = try container.decode(GeofenceStatus.self, forKey: .status)
         
+        // For backward compatibility with old data, use current time if timestamps are missing
+        let currentTimeMillis = Int64(Date().timeIntervalSince1970 * 1000)
+        let createdAtMillis = try container.decodeIfPresent(Int64.self, forKey: .createdAtMillis) ?? currentTimeMillis
+        let statusChangedAtMillis = try container.decodeIfPresent(Int64.self, forKey: .statusChangedAtMillis) ?? currentTimeMillis
+        
         self.init(
             id: id,
             location: location,
             radiusMeters: radiusMeters,
             triggers: triggers,
             androidSettings: androidSettings,
-            status: status
+            status: status,
+            createdAtMillis: createdAtMillis,
+            statusChangedAtMillis: statusChangedAtMillis
         )
     }
     
@@ -208,6 +217,8 @@ extension ActiveGeofence: Codable {
         try container.encode(triggers, forKey: .triggers)
         try container.encodeIfPresent(androidSettings, forKey: .androidSettings)
         try container.encode(status, forKey: .status)
+        try container.encode(createdAtMillis, forKey: .createdAtMillis)
+        try container.encode(statusChangedAtMillis, forKey: .statusChangedAtMillis)
     }
 }
 

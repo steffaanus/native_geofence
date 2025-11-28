@@ -315,7 +315,11 @@ data class ActiveGeofence (
   val radiusMeters: Double,
   val triggers: List<GeofenceEvent>,
   val androidSettings: AndroidGeofenceSettings? = null,
-  val status: GeofenceStatus
+  val status: GeofenceStatus,
+  /** Timestamp (milliseconds since epoch) when this geofence was created. */
+  val createdAtMillis: Long,
+  /** Timestamp (milliseconds since epoch) of the last status change. */
+  val statusChangedAtMillis: Long
 )
  {
   companion object {
@@ -326,7 +330,9 @@ data class ActiveGeofence (
       val triggers = pigeonVar_list[3] as List<GeofenceEvent>
       val androidSettings = pigeonVar_list[4] as AndroidGeofenceSettings?
       val status = pigeonVar_list[5] as GeofenceStatus
-      return ActiveGeofence(id, location, radiusMeters, triggers, androidSettings, status)
+      val createdAtMillis = pigeonVar_list[6] as Long
+      val statusChangedAtMillis = pigeonVar_list[7] as Long
+      return ActiveGeofence(id, location, radiusMeters, triggers, androidSettings, status, createdAtMillis, statusChangedAtMillis)
     }
   }
   fun toList(): List<Any?> {
@@ -337,6 +343,8 @@ data class ActiveGeofence (
       triggers,
       androidSettings,
       status,
+      createdAtMillis,
+      statusChangedAtMillis,
     )
   }
   override fun equals(other: Any?): Boolean {

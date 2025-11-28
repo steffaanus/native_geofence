@@ -225,6 +225,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                 // unconditionally set status to FAILED on failure
                 val failedGeofence = geofenceStorage
                 failedGeofence.status = GeofenceStatus.FAILED
+                failedGeofence.statusChangedAtMillis = System.currentTimeMillis()
                 NativeGeofencePersistence.saveOrUpdateGeofence(context, failedGeofence)
 
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)

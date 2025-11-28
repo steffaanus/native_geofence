@@ -13,6 +13,8 @@ class ActiveGeofenceStorage(
     private val triggers: List<GeofenceEvent>,
     private val androidSettings: AndroidGeofenceSettingsStorage?,
     private val status: GeofenceStatus,
+    private val createdAtMillis: Long,
+    private val statusChangedAtMillis: Long,
 ) {
     companion object {
         fun fromApi(e: ActiveGeofence): ActiveGeofenceStorage {
@@ -23,6 +25,8 @@ class ActiveGeofenceStorage(
                 e.triggers,
                 e.androidSettings?.let { AndroidGeofenceSettingsStorage.fromApi(it) },
                 e.status,
+                e.createdAtMillis,
+                e.statusChangedAtMillis,
             )
         }
     }
@@ -35,6 +39,8 @@ class ActiveGeofenceStorage(
             triggers.map { it },
             androidSettings?.toApi(),
             status,
+            createdAtMillis,
+            statusChangedAtMillis,
         )
     }
 }

@@ -335,6 +335,10 @@ struct ActiveGeofence: Hashable {
   var triggers: [GeofenceEvent]
   var androidSettings: AndroidGeofenceSettings? = nil
   var status: GeofenceStatus
+  /// Timestamp (milliseconds since epoch) when this geofence was created.
+  var createdAtMillis: Int64
+  /// Timestamp (milliseconds since epoch) of the last status change.
+  var statusChangedAtMillis: Int64
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -345,6 +349,8 @@ struct ActiveGeofence: Hashable {
     let triggers = pigeonVar_list[3] as! [GeofenceEvent]
     let androidSettings: AndroidGeofenceSettings? = nilOrValue(pigeonVar_list[4])
     let status = pigeonVar_list[5] as! GeofenceStatus
+    let createdAtMillis = pigeonVar_list[6] as! Int64
+    let statusChangedAtMillis = pigeonVar_list[7] as! Int64
 
     return ActiveGeofence(
       id: id,
@@ -352,7 +358,9 @@ struct ActiveGeofence: Hashable {
       radiusMeters: radiusMeters,
       triggers: triggers,
       androidSettings: androidSettings,
-      status: status
+      status: status,
+      createdAtMillis: createdAtMillis,
+      statusChangedAtMillis: statusChangedAtMillis
     )
   }
   func toList() -> [Any?] {
@@ -363,6 +371,8 @@ struct ActiveGeofence: Hashable {
       triggers,
       androidSettings,
       status,
+      createdAtMillis,
+      statusChangedAtMillis,
     ]
   }
   static func == (lhs: ActiveGeofence, rhs: ActiveGeofence) -> Bool {

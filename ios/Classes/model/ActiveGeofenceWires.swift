@@ -2,13 +2,16 @@ import CoreLocation
 
 class ActiveGeofenceWires {
     static func fromGeofence(_ geofence: Geofence) -> ActiveGeofence {
+        let currentTimeMillis = Int64(Date().timeIntervalSince1970 * 1000)
         return ActiveGeofence(
             id: geofence.id,
             location: geofence.location,
             radiusMeters: geofence.radiusMeters,
             triggers: geofence.triggers,
             androidSettings: geofence.androidSettings,
-            status: .active
+            status: .active,
+            createdAtMillis: currentTimeMillis,
+            statusChangedAtMillis: currentTimeMillis
         )
     }
 
@@ -21,6 +24,7 @@ class ActiveGeofenceWires {
             longitude: circularRegion.center.longitude
         ).normalized()
         
+        let currentTimeMillis = Int64(Date().timeIntervalSince1970 * 1000)
         return ActiveGeofence(
             id: circularRegion.identifier,
             location: normalizedLocation,
@@ -30,7 +34,9 @@ class ActiveGeofenceWires {
                 circularRegion.notifyOnExit ? .exit : nil
             ].compactMap { $0 },
             androidSettings: nil,
-            status: .active
+            status: .active,
+            createdAtMillis: currentTimeMillis,
+            statusChangedAtMillis: currentTimeMillis
         )
     }
 }

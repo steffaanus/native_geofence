@@ -89,6 +89,12 @@ class ActiveGeofence {
 
   final GeofenceStatus status;
 
+  /// Timestamp (milliseconds since epoch) when this geofence was created.
+  final int createdAtMillis;
+
+  /// Timestamp (milliseconds since epoch) of the last status change.
+  final int statusChangedAtMillis;
+
   ActiveGeofence({
     required this.id,
     required this.location,
@@ -96,6 +102,8 @@ class ActiveGeofence {
     required this.triggers,
     required this.androidSettings,
     required this.status,
+    required this.createdAtMillis,
+    required this.statusChangedAtMillis,
   });
 }
 

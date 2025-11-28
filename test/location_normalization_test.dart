@@ -175,6 +175,8 @@ void main() {
         triggers: [GeofenceEvent.enter],
         androidSettings: null,
         status: GeofenceStatus.active,
+        createdAtMillis: 0,
+        statusChangedAtMillis: 0,
       );
 
       // Test with unnormalized input that normalizes to same values
@@ -199,6 +201,8 @@ void main() {
         triggers: [GeofenceEvent.enter],
         androidSettings: null,
         status: GeofenceStatus.active,
+        createdAtMillis: 0,
+        statusChangedAtMillis: 0,
       );
 
       expect(
@@ -222,6 +226,8 @@ void main() {
         triggers: [GeofenceEvent.enter],
         androidSettings: null,
         status: GeofenceStatus.active,
+        createdAtMillis: 0,
+        statusChangedAtMillis: 0,
       );
 
       expect(
@@ -245,6 +251,8 @@ void main() {
         triggers: [GeofenceEvent.enter],
         androidSettings: null,
         status: GeofenceStatus.active,
+        createdAtMillis: 0,
+        statusChangedAtMillis: 0,
       );
 
       expect(
@@ -268,6 +276,8 @@ void main() {
         triggers: [GeofenceEvent.enter],
         androidSettings: null,
         status: GeofenceStatus.active,
+        createdAtMillis: 0,
+        statusChangedAtMillis: 0,
       );
 
       // Both should normalize to 53.164678 and 5.445930
@@ -292,6 +302,8 @@ void main() {
         triggers: [GeofenceEvent.enter, GeofenceEvent.exit],
         androidSettings: null,
         status: GeofenceStatus.active,
+        createdAtMillis: 0,
+        statusChangedAtMillis: 0,
       );
 
       expect(

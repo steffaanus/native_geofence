@@ -327,6 +327,8 @@ class ActiveGeofence {
     required this.triggers,
     this.androidSettings,
     required this.status,
+    required this.createdAtMillis,
+    required this.statusChangedAtMillis,
   });
 
   String id;
@@ -341,6 +343,12 @@ class ActiveGeofence {
 
   GeofenceStatus status;
 
+  /// Timestamp (milliseconds since epoch) when this geofence was created.
+  int createdAtMillis;
+
+  /// Timestamp (milliseconds since epoch) of the last status change.
+  int statusChangedAtMillis;
+
   List<Object?> _toList() {
     return <Object?>[
       id,
@@ -349,6 +357,8 @@ class ActiveGeofence {
       triggers,
       androidSettings,
       status,
+      createdAtMillis,
+      statusChangedAtMillis,
     ];
   }
 
@@ -365,6 +375,8 @@ class ActiveGeofence {
       triggers: (result[3] as List<Object?>?)!.cast<GeofenceEvent>(),
       androidSettings: result[4] as AndroidGeofenceSettings?,
       status: result[5]! as GeofenceStatus,
+      createdAtMillis: result[6]! as int,
+      statusChangedAtMillis: result[7]! as int,
     );
   }
 

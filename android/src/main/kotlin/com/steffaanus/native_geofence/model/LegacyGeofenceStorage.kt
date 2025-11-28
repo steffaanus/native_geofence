@@ -28,6 +28,9 @@ data class LegacyGeofenceStorage(
     }
 
     fun toGeofenceStorage(): GeofenceStorage {
+        // For legacy geofences, use current time for both timestamps
+        // since we don't have historical data
+        val currentTime = System.currentTimeMillis()
         return GeofenceStorage(
             id = id,
             location = location,
@@ -37,6 +40,8 @@ data class LegacyGeofenceStorage(
             iosSettings = iosSettings,
             callbackHandle = callbackHandle,
             status = ApiGeofenceStatus.ACTIVE,
+            createdAtMillis = currentTime,
+            statusChangedAtMillis = currentTime,
         )
     }
 }

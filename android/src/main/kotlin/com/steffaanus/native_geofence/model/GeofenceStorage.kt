@@ -16,9 +16,12 @@ class GeofenceStorage(
     val androidSettings: AndroidGeofenceSettingsStorage,
     val callbackHandle: Long,
     var status: ApiGeofenceStatus = ApiGeofenceStatus.PENDING,
+    var createdAtMillis: Long = System.currentTimeMillis(),
+    var statusChangedAtMillis: Long = System.currentTimeMillis(),
 ) {
     companion object {
         fun fromApi(e: Geofence): GeofenceStorage {
+            val currentTime = System.currentTimeMillis()
             return GeofenceStorage(
                 e.id,
                 LocationStorage.fromApi(e.location),
@@ -28,6 +31,8 @@ class GeofenceStorage(
                 AndroidGeofenceSettingsStorage.fromApi(e.androidSettings),
                 e.callbackHandle,
                 ApiGeofenceStatus.PENDING,
+                currentTime,
+                currentTime,
             )
         }
     }
@@ -52,6 +57,8 @@ class GeofenceStorage(
             triggers.toList(),
             androidSettings.toApi(),
             status,
+            createdAtMillis,
+            statusChangedAtMillis,
         )
     }
 }

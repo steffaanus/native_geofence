@@ -132,6 +132,7 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         geofences.forEach { geofence ->
             if (geofence.status != GeofenceStatus.ACTIVE) {
                 geofence.status = GeofenceStatus.ACTIVE
+                geofence.statusChangedAtMillis = System.currentTimeMillis()
                 NativeGeofencePersistence.saveOrUpdateGeofence(context, geofence)
                 Log.d(TAG, "Updated Geofence ID=${geofence.id} status to ACTIVE after receiving event.")
             }
