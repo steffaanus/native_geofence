@@ -166,6 +166,18 @@ enum class NativeGeofenceErrorCode(val raw: Int) {
   }
 }
 
+/** Log severity levels for native logging */
+enum class NativeLogLevel(val raw: Int) {
+  WARNING(0),
+  ERROR(1);
+
+  companion object {
+    fun ofRaw(raw: Int): NativeLogLevel? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class Location (
   val latitude: Double,
@@ -441,6 +453,50 @@ data class ForegroundServiceConfiguration (
 
   override fun hashCode(): Int = toList().hashCode()
 }
+
+/**
+ * A log entry from native platform code
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class NativeLogEntry (
+  val level: NativeLogLevel,
+  val message: String,
+  val category: String,
+  val timestampMillis: Long,
+  val platform: String? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): NativeLogEntry {
+      val level = pigeonVar_list[0] as NativeLogLevel
+      val message = pigeonVar_list[1] as String
+      val category = pigeonVar_list[2] as String
+      val timestampMillis = pigeonVar_list[3] as Long
+      val platform = pigeonVar_list[4] as String?
+      return NativeLogEntry(level, message, category, timestampMillis, platform)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      level,
+      message,
+      category,
+      timestampMillis,
+      platform,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is NativeLogEntry) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return NativeGeofenceApiPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
 private open class NativeGeofenceApiPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -460,38 +516,48 @@ private open class NativeGeofenceApiPigeonCodec : StandardMessageCodec() {
         }
       }
       132.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          Location.fromList(it)
+        return (readValue(buffer) as Long?)?.let {
+          NativeLogLevel.ofRaw(it.toInt())
         }
       }
       133.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          IosGeofenceSettings.fromList(it)
+          Location.fromList(it)
         }
       }
       134.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          AndroidGeofenceSettings.fromList(it)
+          IosGeofenceSettings.fromList(it)
         }
       }
       135.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          Geofence.fromList(it)
+          AndroidGeofenceSettings.fromList(it)
         }
       }
       136.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ActiveGeofence.fromList(it)
+          Geofence.fromList(it)
         }
       }
       137.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          GeofenceCallbackParams.fromList(it)
+          ActiveGeofence.fromList(it)
         }
       }
       138.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
+          GeofenceCallbackParams.fromList(it)
+        }
+      }
+      139.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
           ForegroundServiceConfiguration.fromList(it)
+        }
+      }
+      140.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          NativeLogEntry.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -511,32 +577,40 @@ private open class NativeGeofenceApiPigeonCodec : StandardMessageCodec() {
         stream.write(131)
         writeValue(stream, value.raw.toLong())
       }
-      is Location -> {
+      is NativeLogLevel -> {
         stream.write(132)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw.toLong())
       }
-      is IosGeofenceSettings -> {
+      is Location -> {
         stream.write(133)
         writeValue(stream, value.toList())
       }
-      is AndroidGeofenceSettings -> {
+      is IosGeofenceSettings -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is Geofence -> {
+      is AndroidGeofenceSettings -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is ActiveGeofence -> {
+      is Geofence -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is GeofenceCallbackParams -> {
+      is ActiveGeofence -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is ForegroundServiceConfiguration -> {
+      is GeofenceCallbackParams -> {
         stream.write(138)
+        writeValue(stream, value.toList())
+      }
+      is ForegroundServiceConfiguration -> {
+        stream.write(139)
+        writeValue(stream, value.toList())
+      }
+      is NativeLogEntry -> {
+        stream.write(140)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -716,6 +790,36 @@ class NativeGeofenceTriggerApi(private val binaryMessenger: BinaryMessenger, pri
     val channelName = "dev.flutter.pigeon.native_geofence.NativeGeofenceTriggerApi.geofenceTriggered$separatedMessageChannelSuffix"
     val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
     channel.send(listOf(paramsArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(NativeGeofenceApiPigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
+}
+/**
+ * Flutter API for receiving native log entries
+ *
+ * Generated class from Pigeon that represents Flutter messages that can be called from Kotlin.
+ */
+class NativeGeofenceLogApi(private val binaryMessenger: BinaryMessenger, private val messageChannelSuffix: String = "") {
+  companion object {
+    /** The codec used by NativeGeofenceLogApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      NativeGeofenceApiPigeonCodec()
+    }
+  }
+  fun logReceived(entryArg: NativeLogEntry, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.native_geofence.NativeGeofenceLogApi.logReceived$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(entryArg)) {
       if (it is List<*>) {
         if (it.size > 1) {
           callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))

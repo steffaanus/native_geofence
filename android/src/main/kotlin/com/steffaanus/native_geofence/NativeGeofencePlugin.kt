@@ -17,7 +17,7 @@ class NativeGeofencePlugin : FlutterPlugin {
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         NativeGeofenceApi.setUp(
             binding.binaryMessenger,
-            NativeGeofenceApiImpl(binding.applicationContext)
+            NativeGeofenceApiImpl(binding.applicationContext, binding.binaryMessenger)
         )
         Log.d(TAG, "NativeGeofenceApi setup complete.")
     }

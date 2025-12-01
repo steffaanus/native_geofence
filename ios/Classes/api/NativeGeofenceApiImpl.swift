@@ -4,7 +4,7 @@ import OSLog
 import UIKit
 
 public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
-    private let log = Logger(subsystem: Constants.PACKAGE_NAME, category: "NativeGeofenceApiImpl")
+    private let log = NativeGeofenceLogger(category: "NativeGeofenceApiImpl")
     
     private let locationManagerDelegate: LocationManagerDelegate
     private let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
@@ -19,6 +19,12 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
         foregroundServiceConfig: ForegroundServiceConfiguration?
     ) throws {
         NativeGeofencePersistence.setCallbackDispatcherHandle(callbackDispatcherHandle)
+        
+        // Setup log forwarding to Flutter
+        if let registrant = flutterPluginRegistrantCallback {
+            let logApi = NativeGeofenceLogApi(binaryMessenger: registrant.messenger())
+            NativeGeofenceLogger.setFlutterLogApi(logApi)
+        }
         
         // Note: foregroundServiceConfig is for Android only and is not used on iOS
         // as iOS does not have an equivalent foreground service notification.

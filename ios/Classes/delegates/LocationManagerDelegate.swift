@@ -19,7 +19,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         return _sharedLocationManager!
     }
     
-    private let log = Logger(subsystem: Constants.PACKAGE_NAME, category: "LocationManagerDelegate")
+    private let log = NativeGeofenceLogger(category: "LocationManagerDelegate")
 
     let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
     let locationManager: CLLocationManager
