@@ -38,8 +38,9 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     }
     let locationManager: CLLocationManager
     
-    // Background task management
-    private var backgroundTaskId: UIBackgroundTaskIdentifier = .invalid
+    // Background task management - track multiple tasks
+    private var backgroundTasks: [UUID: UIBackgroundTaskIdentifier] = [:]
+    private let backgroundTasksLock = NSLock()
     private let processingQueue = DispatchQueue(label: "com.native_geofence.processing", qos: .userInitiated)
     
     // Persistence for failed events
@@ -118,26 +119,35 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         }
         
         // 2. Start background task IMMEDIATELY to secure execution time
-        backgroundTaskId = UIApplication.shared.beginBackgroundTask(withName: "GeofenceEvent") { [weak self] in
-            self?.log.warning("Background task expiring - cleaning up")
-            self?.endBackgroundTask()
+        // Generate unique ID for this specific event processing
+        let taskKey = UUID()
+        let backgroundTaskId = UIApplication.shared.beginBackgroundTask(withName: "GeofenceEvent") { [weak self] in
+            self?.log.warning("Background task \(taskKey) expiring - cleaning up")
+            self?.endBackgroundTask(taskKey: taskKey)
         }
+        
+        // Store the task ID with its key
+        backgroundTasksLock.lock()
+        backgroundTasks[taskKey] = backgroundTaskId
+        backgroundTasksLock.unlock()
+        
+        log.debug("Started background task \(taskKey) for geofence \(activeGeofence.id)")
         
         // 3. Return QUICKLY from delegate - do heavy work ASYNC
         // This follows Apple's best practices: "return control to the location manager as quickly as possible"
         processingQueue.async { [weak self] in
-            self?.processGeofenceEventAsync(activeGeofence: activeGeofence, event: event)
+            self?.processGeofenceEventAsync(activeGeofence: activeGeofence, event: event, taskKey: taskKey)
         }
     }
     
     // MARK: - Async Processing (Apple Best practice)
     
     /// Process geofence event asynchronously to avoid blocking CLLocationManager delegate
-    private func processGeofenceEventAsync(activeGeofence: ActiveGeofence, event: GeofenceEvent) {
+    private func processGeofenceEventAsync(activeGeofence: ActiveGeofence, event: GeofenceEvent, taskKey: UUID) {
         // Now we can do heavy work without blocking the delegate method
         guard let geofence = NativeGeofencePersistence.getGeofence(id: activeGeofence.id) else {
             log.error("Geofence definition for region \(activeGeofence.id) not found in persistence.")
-            endBackgroundTask()
+            endBackgroundTask(taskKey: taskKey)
             return
         }
 
@@ -154,22 +164,22 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
             guard let registrant = flutterPluginRegistrantCallback else {
                 log.error("Flutter plugin registrant callback is not available. Cannot restart engine. Persisting event.")
                 persistFailedEvent(params)
-                endBackgroundTask()
+                endBackgroundTask(taskKey: taskKey)
                 return
             }
             // Start engine with retry logic
-            startEngineAndSendEvent(params: params, activeGeofence: activeGeofence)
+            startEngineAndSendEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
         } else {
             // Engine is already running, send the event directly
-            sendGeofenceEvent(params: params, activeGeofence: activeGeofence)
+            sendGeofenceEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
         }
     }
 
-    private func sendGeofenceEvent(params: GeofenceCallbackParams, activeGeofence: ActiveGeofence) {
+    private func sendGeofenceEvent(params: GeofenceCallbackParams, activeGeofence: ActiveGeofence, taskKey: UUID) {
         guard let backgroundApi = EngineManager.shared.getBackgroundApi() else {
             log.error("Failed to get background API even after engine start. Persisting event for retry.")
             persistFailedEvent(params)
-            endBackgroundTask()
+            endBackgroundTask(taskKey: taskKey)
             return
         }
 
@@ -183,17 +193,25 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
                 self?.persistFailedEvent(params)
             }
             // End background task AFTER Flutter callback completion
-            self?.endBackgroundTask()
+            self?.endBackgroundTask(taskKey: taskKey)
         }
         log.debug("Geofence trigger event sent for \(activeGeofence.id).")
     }
     
-    /// End the background task if one is active
-    private func endBackgroundTask() {
-        if backgroundTaskId != .invalid {
-            UIApplication.shared.endBackgroundTask(backgroundTaskId)
-            backgroundTaskId = .invalid
-            log.debug("Background task ended")
+    /// End the background task for the specified key
+    private func endBackgroundTask(taskKey: UUID) {
+        backgroundTasksLock.lock()
+        defer { backgroundTasksLock.unlock() }
+        
+        guard let taskId = backgroundTasks[taskKey] else {
+            log.warning("Attempted to end background task \(taskKey) but it was not found")
+            return
+        }
+        
+        if taskId != .invalid {
+            UIApplication.shared.endBackgroundTask(taskId)
+            backgroundTasks.removeValue(forKey: taskKey)
+            log.debug("Background task \(taskKey) ended successfully")
         }
     }
 
@@ -206,18 +224,20 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     private func startEngineAndSendEvent(
         params: GeofenceCallbackParams,
         activeGeofence: ActiveGeofence,
+        taskKey: UUID,
         retryCount: Int = 0
     ) {
         guard let registrant = flutterPluginRegistrantCallback else {
             log.error("No registrant callback - persisting event for later retry")
             persistFailedEvent(params)
+            endBackgroundTask(taskKey: taskKey)
             return
         }
         
         EngineManager.shared.startEngine(withPluginRegistrant: registrant) {
             if EngineManager.shared.getBackgroundApi() != nil {
                 self.log.debug("Engine started successfully, sending event")
-                self.sendGeofenceEvent(params: params, activeGeofence: activeGeofence)
+                self.sendGeofenceEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
             } else if retryCount < self.maxRetries {
                 let nextRetry = retryCount + 1
                 // Exponential backoff: 2s, 4s, 8s
@@ -228,12 +248,14 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
                     self.startEngineAndSendEvent(
                         params: params,
                         activeGeofence: activeGeofence,
+                        taskKey: taskKey,
                         retryCount: nextRetry
                     )
                 }
             } else {
                 self.log.error("Engine start failed after \(self.maxRetries) retries. Persisting event for next app launch.")
                 self.persistFailedEvent(params)
+                self.endBackgroundTask(taskKey: taskKey)
             }
         }
     }
@@ -279,7 +301,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         UserDefaults.standard.removeObject(forKey: pendingEventsKey)
         UserDefaults.standard.synchronize()
         
-        // Process each pending event
+        // Process each pending event with its own background task
         for params in pendingEvents {
             // Reconstruct ActiveGeofence from persistence
             if let firstGeofence = params.geofences.first,
@@ -287,7 +309,19 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
                let storedGeofence = NativeGeofencePersistence.getGeofence(id: geofenceId) {
                 let activeGeofence = ActiveGeofenceWires.fromGeofence(storedGeofence)
                 log.debug("Retrying pending event for geofence \(geofenceId)")
-                startEngineAndSendEvent(params: params, activeGeofence: activeGeofence)
+                
+                // Start a new background task for this retry
+                let taskKey = UUID()
+                let backgroundTaskId = UIApplication.shared.beginBackgroundTask(withName: "GeofenceEvent-Retry") { [weak self] in
+                    self?.log.warning("Background task \(taskKey) (retry) expiring - cleaning up")
+                    self?.endBackgroundTask(taskKey: taskKey)
+                }
+                
+                backgroundTasksLock.lock()
+                backgroundTasks[taskKey] = backgroundTaskId
+                backgroundTasksLock.unlock()
+                
+                startEngineAndSendEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
             } else {
                 log.error("Cannot reconstruct geofence for pending event. Event lost.")
             }
