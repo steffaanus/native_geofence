@@ -15,7 +15,7 @@ public class NativeGeofencePlugin: NSObject, FlutterPlugin {
     private var nativeGeofenceApi: NativeGeofenceApiImpl? = nil
     
     init(registrar: FlutterPluginRegistrar, registerPlugins: FlutterPluginRegistrantCallback) {
-        nativeGeofenceApi = NativeGeofenceApiImpl(registerPlugins: registerPlugins)
+        nativeGeofenceApi = NativeGeofenceApiImpl(registerPlugins: registerPlugins, binaryMessenger: registrar.messenger())
         NativeGeofenceApiSetup.setUp(binaryMessenger: registrar.messenger(), api: nativeGeofenceApi)
         
         // Ensure the LocationManagerDelegate singleton is retained

@@ -59,7 +59,7 @@ class EngineManager {
         log.debug("NativeGeofenceBackgroundApi setup called.")
 
         // Also register the main NativeGeofenceApi in background context
-        let nativeGeofenceMainApi = NativeGeofenceApiImpl(registerPlugins: registrant)
+        let nativeGeofenceMainApi = NativeGeofenceApiImpl(registerPlugins: registrant, binaryMessenger: headlessEngine!.binaryMessenger)
         NativeGeofenceApiSetup.setUp(binaryMessenger: headlessEngine!.binaryMessenger, api: nativeGeofenceMainApi)
         log.debug("NativeGeofenceMainApi also initialized in background context.")
     }

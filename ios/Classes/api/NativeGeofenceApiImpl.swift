@@ -8,9 +8,11 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
     
     private let locationManagerDelegate: LocationManagerDelegate
     private let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
+    private let binaryMessenger: FlutterBinaryMessenger
 
-    init(registerPlugins: FlutterPluginRegistrantCallback) {
+    init(registerPlugins: FlutterPluginRegistrantCallback, binaryMessenger: FlutterBinaryMessenger) {
         self.flutterPluginRegistrantCallback = registerPlugins
+        self.binaryMessenger = binaryMessenger
         // Set the callback on the singleton and use the shared instance
         LocationManagerDelegate.setPluginRegistrantCallback(registerPlugins)
         self.locationManagerDelegate = LocationManagerDelegate.shared
@@ -26,10 +28,8 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
         NativeGeofencePersistence.setCallbackDispatcherHandle(callbackDispatcherHandle)
         
         // Setup log forwarding to Flutter
-        if let registrant = flutterPluginRegistrantCallback {
-            let logApi = NativeGeofenceLogApi(binaryMessenger: registrant.messenger())
-            NativeGeofenceLogger.setFlutterLogApi(logApi)
-        }
+        let logApi = NativeGeofenceLogApi(binaryMessenger: binaryMessenger)
+        NativeGeofenceLogger.setFlutterLogApi(logApi)
         
         // Note: foregroundServiceConfig is for Android only and is not used on iOS
         // as iOS does not have an equivalent foreground service notification.
