@@ -11,6 +11,7 @@ import com.steffaanus.native_geofence.generated.NativeLogLevel
 class NativeGeofenceLogger(private val tag: String) {
     
     companion object {
+        private const val TAG = "NativeGeofenceLogger"
         private var flutterLogApi: NativeGeofenceLogApi? = null
         private val logBuffer = mutableListOf<NativeLogEntry>()
         private const val MAX_BUFFER_SIZE = 50
@@ -36,7 +37,7 @@ class NativeGeofenceLogger(private val tag: String) {
                                     // Ignore result - flushing is best-effort
                                 }
                             } catch (e: Exception) {
-                                Log.e(tag, "Failed to flush buffered log", e)
+                                Log.e(TAG, "Failed to flush buffered log", e)
                             }
                         }
                     }.start()
