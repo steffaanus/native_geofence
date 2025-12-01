@@ -8,12 +8,20 @@ public class NativeGeofencePlugin: NSObject, FlutterPlugin {
     private static var registerPlugins: FlutterPluginRegistrantCallback? = nil
     private static var instance: NativeGeofencePlugin? = nil
     
+    // Keep a strong reference to the LocationManagerDelegate singleton to prevent deallocation
+    // This is a safety measure even though LocationManagerDelegate is itself a singleton
+    private static var sharedLocationDelegate: LocationManagerDelegate?
+    
     private var nativeGeofenceApi: NativeGeofenceApiImpl? = nil
     
     init(registrar: FlutterPluginRegistrar, registerPlugins: FlutterPluginRegistrantCallback) {
         nativeGeofenceApi = NativeGeofenceApiImpl(registerPlugins: registerPlugins)
         NativeGeofenceApiSetup.setUp(binaryMessenger: registrar.messenger(), api: nativeGeofenceApi)
-        NativeGeofencePlugin.log.debug("NativeGeofenceApi initialized.")
+        
+        // Ensure the LocationManagerDelegate singleton is retained
+        NativeGeofencePlugin.sharedLocationDelegate = LocationManagerDelegate.shared
+        
+        NativeGeofencePlugin.log.debug("NativeGeofenceApi initialized with retained LocationManagerDelegate")
     }
     
     /// Called from the Flutter plugins AppDelegate.swift.

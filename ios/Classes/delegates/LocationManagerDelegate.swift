@@ -2,8 +2,17 @@ import CoreLocation
 import Flutter
 import OSLog
 
-// Singleton class
+// Singleton class - Ensures LocationManager delegate is never deallocated
 class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
+    // MARK: - Singleton Setup
+    
+    // The shared singleton instance - prevents deallocation
+    static let shared: LocationManagerDelegate = {
+        let instance = LocationManagerDelegate()
+        instance.log.debug("LocationManagerDelegate singleton created")
+        return instance
+    }()
+    
     // Prevent multiple instances of CLLocationManager to avoid duplicate triggers.
     // Thread-safe singleton pattern
     private static let lock = NSLock()
@@ -19,9 +28,14 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         return _sharedLocationManager!
     }
     
+    // Store the registrant callback statically so it survives
+    private static var _registrantCallback: FlutterPluginRegistrantCallback?
+    
     private let log = Logger(subsystem: Constants.PACKAGE_NAME, category: "LocationManagerDelegate")
 
-    let flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?
+    var flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback? {
+        return LocationManagerDelegate._registrantCallback
+    }
     let locationManager: CLLocationManager
     
     // Background task management
@@ -33,18 +47,31 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     private let maxPendingEvents = 50
     private let maxRetries = 3
 
-    init(flutterPluginRegistrantCallback: FlutterPluginRegistrantCallback?) {
-        self.flutterPluginRegistrantCallback = flutterPluginRegistrantCallback
+    private init() {
         // Use thread-safe getter
         locationManager = LocationManagerDelegate.sharedLocationManager
 
         super.init()
         locationManager.delegate = self
 
-        log.debug("LocationManagerDelegate created with instance ID=\(Int.random(in: 1 ... 1000000)).")
+        log.debug("LocationManagerDelegate initialized as singleton")
         
         // Try to process any previously failed events
         retryPendingEvents()
+    }
+    
+    // MARK: - Public Configuration
+    
+    /// Set the plugin registrant callback - should be called from AppDelegate or plugin initialization
+    static func setPluginRegistrantCallback(_ callback: @escaping FlutterPluginRegistrantCallback) {
+        _registrantCallback = callback
+        shared.log.debug("Plugin registrant callback configured")
+    }
+    
+    // MARK: - Memory Management Debug
+    
+    deinit {
+        log.error("🚨 LocationManagerDelegate is being deallocated! This should NEVER happen with singleton pattern!")
     }
 
     func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {

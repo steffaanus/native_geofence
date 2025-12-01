@@ -11,7 +11,12 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
 
     init(registerPlugins: FlutterPluginRegistrantCallback) {
         self.flutterPluginRegistrantCallback = registerPlugins
-        self.locationManagerDelegate = LocationManagerDelegate(flutterPluginRegistrantCallback: registerPlugins)
+        // Set the callback on the singleton and use the shared instance
+        LocationManagerDelegate.setPluginRegistrantCallback(registerPlugins)
+        self.locationManagerDelegate = LocationManagerDelegate.shared
+        
+        super.init()
+        log.debug("NativeGeofenceApiImpl initialized with singleton LocationManagerDelegate")
     }
     
     func initialize(

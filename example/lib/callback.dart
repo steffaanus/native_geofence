@@ -29,7 +29,7 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
       '${params.location?.longitude.toStringAsFixed(5)}';
   await notificationsRepository.showGeofenceTriggerNotification(title, message);
 
-  await Future.delayed(const Duration(seconds: 60));
+  //await Future.delayed(const Duration(seconds: 60));
 }
 
 String capitalize(String text) {
