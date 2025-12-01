@@ -26,7 +26,7 @@ import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
 import io.flutter.plugin.common.BinaryMessenger
 
-class NativeGeofenceApiImpl(private val context: Context, private val binaryMessenger: BinaryMessenger) : NativeGeofenceApi {
+class NativeGeofenceApiImpl(private val context: Context, private val binaryMessenger: BinaryMessenger? = null) : NativeGeofenceApi {
     private val log = NativeGeofenceLogger("NativeGeofenceApiImpl")
 
     private var lastSyncTime = 0L
@@ -37,9 +37,11 @@ class NativeGeofenceApiImpl(private val context: Context, private val binaryMess
         callbackDispatcherHandle: Long,
         foregroundServiceConfig: ForegroundServiceConfiguration?
     ) {
-        // Setup log forwarding to Flutter
-        val logApi = NativeGeofenceLogApi(binaryMessenger)
-        NativeGeofenceLogger.setFlutterLogApi(logApi)
+        // Setup log forwarding to Flutter (only when binaryMessenger is available)
+        if (binaryMessenger != null) {
+            val logApi = NativeGeofenceLogApi(binaryMessenger)
+            NativeGeofenceLogger.setFlutterLogApi(logApi)
+        }
         
         val prefs = context.getSharedPreferences(Constants.SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
         val editor = prefs.edit()
