@@ -47,7 +47,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     private let maxPendingEvents = 50
     private let maxRetries = 3
 
-    private init() {
+    private override init() {
         // Use thread-safe getter
         locationManager = LocationManagerDelegate.sharedLocationManager
 
