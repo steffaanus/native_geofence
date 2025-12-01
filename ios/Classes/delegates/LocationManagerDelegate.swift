@@ -167,8 +167,10 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
                 endBackgroundTask(taskKey: taskKey)
                 return
             }
-            // Start engine with retry logic
-            startEngineAndSendEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
+            // Dispatch engine operations to main thread - EngineManager requires this
+            DispatchQueue.main.async { [weak self] in
+                self?.startEngineAndSendEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
+            }
         } else {
             // Engine is already running, send the event directly
             sendGeofenceEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
@@ -234,31 +236,31 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
             return
         }
         
-        // Flutter UI components must be initialized on main thread to comply with iOS threading requirements
-        DispatchQueue.main.async {
-            EngineManager.shared.startEngine(withPluginRegistrant: registrant) {
-                if EngineManager.shared.getBackgroundApi() != nil {
-                    self.log.debug("Engine started successfully, sending event")
-                    self.sendGeofenceEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
-                } else if retryCount < self.maxRetries {
-                    let nextRetry = retryCount + 1
-                    // Exponential backoff: 2s, 4s, 8s
-                    let delay = pow(2.0, Double(nextRetry))
-                    self.log.warning("Engine start incomplete. Retry \(nextRetry)/\(self.maxRetries) in \(delay)s")
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        self.startEngineAndSendEvent(
-                            params: params,
-                            activeGeofence: activeGeofence,
-                            taskKey: taskKey,
-                            retryCount: nextRetry
-                        )
-                    }
-                } else {
-                    self.log.error("Engine start failed after \(self.maxRetries) retries. Persisting event for next app launch.")
-                    self.persistFailedEvent(params)
-                    self.endBackgroundTask(taskKey: taskKey)
+        // EngineManager.startEngine now handles main thread dispatch internally
+        EngineManager.shared.startEngine(withPluginRegistrant: registrant) { [weak self] in
+            guard let self = self else { return }
+            
+            if EngineManager.shared.getBackgroundApi() != nil {
+                self.log.debug("Engine started successfully, sending event")
+                self.sendGeofenceEvent(params: params, activeGeofence: activeGeofence, taskKey: taskKey)
+            } else if retryCount < self.maxRetries {
+                let nextRetry = retryCount + 1
+                // Exponential backoff: 2s, 4s, 8s
+                let delay = pow(2.0, Double(nextRetry))
+                self.log.warning("Engine start incomplete. Retry \(nextRetry)/\(self.maxRetries) in \(delay)s")
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                    self?.startEngineAndSendEvent(
+                        params: params,
+                        activeGeofence: activeGeofence,
+                        taskKey: taskKey,
+                        retryCount: nextRetry
+                    )
                 }
+            } else {
+                self.log.error("Engine start failed after \(self.maxRetries) retries. Persisting event for next app launch.")
+                self.persistFailedEvent(params)
+                self.endBackgroundTask(taskKey: taskKey)
             }
         }
     }
