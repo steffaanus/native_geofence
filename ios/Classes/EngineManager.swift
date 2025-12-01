@@ -11,6 +11,7 @@ class EngineManager {
     private var backgroundApi: NativeGeofenceBackgroundApiImpl?
     private var onEngineStarted: (() -> Void)?
     private var isStarting = false
+    private var pendingCompletions: [() -> Void] = []
 
     private init() {}
     
@@ -29,22 +30,28 @@ class EngineManager {
             lock.unlock()
         }
 
-        // Check if engine already exists
-        if let existingEngine = headlessEngine {
-            log.debug("Engine already started.")
+        // Check if engine already exists AND backgroundApi is ready
+        if headlessEngine != nil && backgroundApi != nil {
+            log.debug("Engine and background API already ready.")
             completion?()
+            return
+        }
+        
+        // Check if engine exists but backgroundApi is still initializing
+        if headlessEngine != nil && backgroundApi == nil {
+            log.debug("Engine exists but background API not ready yet - queuing completion")
+            if let completion = completion {
+                pendingCompletions.append(completion)
+            }
             return
         }
         
         // Check if engine startup is in progress
         if isStarting {
-            log.debug("Engine startup already in progress - waiting")
-            // Wait for current startup to complete, then retry
-            lock.unlock() // Release lock before async call
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                self?.startEngine(withPluginRegistrant: registrant, completion: completion)
+            log.debug("Engine startup already in progress - queuing completion")
+            if let completion = completion {
+                pendingCompletions.append(completion)
             }
-            lock.lock() // Re-acquire for defer block
             return
         }
         
@@ -80,11 +87,18 @@ class EngineManager {
             self.backgroundApi = api
             self.isStarting = false
             self.log.debug("NativeGeofenceBackgroundApi is ready.")
-            let localCompletion = completion
+            
+            // Collect all pending completions
+            let allCompletions = self.pendingCompletions + (completion != nil ? [completion!] : [])
+            self.pendingCompletions.removeAll()
+            
+            self.log.debug("Executing \(allCompletions.count) pending completion handler(s)")
             self.lock.unlock()
 
-            // Execute the completion handler now that the background API is fully initialized.
-            localCompletion?()
+            // Execute all completion handlers now that the background API is fully initialized
+            for completionHandler in allCompletions {
+                completionHandler()
+            }
         }
 
         NativeGeofenceBackgroundApiSetup.setUp(binaryMessenger: headlessEngine!.binaryMessenger, api: api)
@@ -110,6 +124,7 @@ class EngineManager {
         headlessEngine = nil
         backgroundApi = nil
         isStarting = false
+        pendingCompletions.removeAll()
         log.debug("Headless engine stopped and cleaned up.")
     }
 }
