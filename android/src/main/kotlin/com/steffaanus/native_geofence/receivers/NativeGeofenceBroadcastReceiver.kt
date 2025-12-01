@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 import com.steffaanus.native_geofence.generated.GeofenceStatus
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
@@ -17,20 +16,19 @@ import com.steffaanus.native_geofence.NativeGeofenceForegroundService
 import com.steffaanus.native_geofence.generated.GeofenceCallbackParams
 import com.steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
 import com.steffaanus.native_geofence.util.GeofenceEvents
+import com.steffaanus.native_geofence.util.NativeGeofenceLogger
 import com.steffaanus.native_geofence.util.NativeGeofencePersistence
 import com.google.android.gms.location.GeofencingEvent
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
-    companion object {
-        private const val TAG = "NativeGeofenceBroadcastReceiver"
-    }
+    private val log = NativeGeofenceLogger("NativeGeofenceBroadcastReceiver")
 
     override fun onReceive(context: Context, intent: Intent) {
         val geofencingEvent = GeofencingEvent.fromIntent(intent)
         if (geofencingEvent == null) {
-            Log.e(TAG, "GeofencingEvent is null.")
+            log.e("GeofencingEvent is null.")
             return
         }
         val geofenceCallbackParams = getGeofenceCallbackParams(context, geofencingEvent, intent) ?: return
@@ -46,8 +44,8 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         }
         
         // Fallback to WorkManager for Android 7 and below, or if ForegroundService failed
-        Log.d(TAG, "Using WorkManager fallback")
-        startWorkManager(context, jsonData)
+    log.d("Using WorkManager fallback")
+    startWorkManager(context, jsonData)
     }
     
     /**
@@ -62,15 +60,15 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             }
             
             context.startForegroundService(serviceIntent)
-            Log.d(TAG, "Successfully started ForegroundService for geofence event")
+            log.d("Successfully started ForegroundService for geofence event")
             return true
             
         } catch (e: SecurityException) {
-            Log.e(TAG, "SecurityException starting ForegroundService: ${e.message}", e)
+            log.e("SecurityException starting ForegroundService: ${e.message}", e)
         } catch (e: IllegalStateException) {
-            Log.e(TAG, "IllegalStateException starting ForegroundService: ${e.message}", e)
+            log.e("IllegalStateException starting ForegroundService: ${e.message}", e)
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected exception starting ForegroundService: ${e.message}", e)
+            log.e("Unexpected exception starting ForegroundService: ${e.message}", e)
         }
         
         return false
@@ -93,7 +91,7 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             workRequest
         )
         work.enqueue()
-        Log.d(TAG, "WorkManager enqueued for geofence event")
+        log.d("WorkManager enqueued for geofence event")
     }
 
     private fun getGeofenceCallbackParams(
@@ -102,17 +100,14 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         intent: Intent
     ): GeofenceCallbackParams? {
         if (geofencingEvent.hasError()) {
-            Log.e(TAG, "GeofencingEvent has error Code=${geofencingEvent.errorCode}.")
+            log.e("GeofencingEvent has error Code=${geofencingEvent.errorCode}.")
             return null
         }
 
         // Get the transition type.
         val geofenceEvent = GeofenceEvents.fromInt(geofencingEvent.geofenceTransition)
         if (geofenceEvent == null) {
-            Log.e(
-                TAG,
-                "GeofencingEvent has invalid transition ID=${geofencingEvent.geofenceTransition}."
-            )
+            log.e("GeofencingEvent has invalid transition ID=${geofencingEvent.geofenceTransition}.")
             return null
         }
 
@@ -122,11 +117,11 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         } ?: emptyList()
 
         if (geofences.isEmpty()) {
-            Log.e(TAG, "No geofences found for triggering geofences.")
+            log.e("No geofences found for triggering geofences.")
             return null
         }
 
-        Log.d(TAG, "Processing ${geofences.size} triggered geofence(s)")
+        log.d("Processing ${geofences.size} triggered geofence(s)")
 
         // Update all geofence statuses to ACTIVE now that we've confirmed they're actually working
         geofences.forEach { geofence ->
@@ -134,13 +129,13 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
                 geofence.status = GeofenceStatus.ACTIVE
                 geofence.statusChangedAtMillis = System.currentTimeMillis()
                 NativeGeofencePersistence.saveOrUpdateGeofence(context, geofence)
-                Log.d(TAG, "Updated Geofence ID=${geofence.id} status to ACTIVE after receiving event.")
+                log.d("Updated Geofence ID=${geofence.id} status to ACTIVE after receiving event.")
             }
         }
 
         val location = geofencingEvent.triggeringLocation
         if (location == null) {
-            Log.w(TAG, "No triggering location found.")
+            log.w("No triggering location found.")
         }
 
         // Use the callback handle from the first geofence (they should all have the same dispatcher)

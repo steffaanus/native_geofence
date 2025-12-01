@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import androidx.core.content.ContextCompat
 import com.steffaanus.native_geofence.model.GeofenceStorage
 import com.steffaanus.native_geofence.Constants
@@ -18,17 +17,17 @@ import com.steffaanus.native_geofence.generated.Geofence
 import com.steffaanus.native_geofence.generated.GeofenceStatus
 import com.steffaanus.native_geofence.generated.NativeGeofenceApi
 import com.steffaanus.native_geofence.generated.NativeGeofenceErrorCode
+import com.steffaanus.native_geofence.generated.NativeGeofenceLogApi
 import com.steffaanus.native_geofence.util.GeofenceEvents
+import com.steffaanus.native_geofence.util.NativeGeofenceLogger
 import com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver
 import com.steffaanus.native_geofence.util.NativeGeofencePersistence
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
+import io.flutter.plugin.common.BinaryMessenger
 
-class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
-    companion object {
-        @JvmStatic
-        private val TAG = "NativeGeofenceApiImpl"
-    }
+class NativeGeofenceApiImpl(private val context: Context, private val binaryMessenger: BinaryMessenger) : NativeGeofenceApi {
+    private val log = NativeGeofenceLogger("NativeGeofenceApiImpl")
 
     private var lastSyncTime = 0L
     private val SYNC_DEBOUNCE_MS = 5000L // 5 seconden
@@ -38,6 +37,10 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         callbackDispatcherHandle: Long,
         foregroundServiceConfig: ForegroundServiceConfiguration?
     ) {
+        // Setup log forwarding to Flutter
+        val logApi = NativeGeofenceLogApi(binaryMessenger)
+        NativeGeofenceLogger.setFlutterLogApi(logApi)
+        
         val prefs = context.getSharedPreferences(Constants.SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
         val editor = prefs.edit()
         
@@ -48,11 +51,11 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
             editor.putString(Constants.FOREGROUND_NOTIFICATION_TITLE_KEY, foregroundServiceConfig.notificationTitle)
             editor.putString(Constants.FOREGROUND_NOTIFICATION_TEXT_KEY, foregroundServiceConfig.notificationText)
             editor.putString(Constants.FOREGROUND_NOTIFICATION_ICON_KEY, foregroundServiceConfig.notificationIconName ?: Constants.DEFAULT_NOTIFICATION_ICON)
-            Log.d(TAG, "Stored foreground service notification configuration")
+            log.d("Stored foreground service notification configuration")
         }
         
         editor.apply()
-        Log.d(TAG, "Initialized NativeGeofenceApi.")
+        log.d("Initialized NativeGeofenceApi.")
         syncGeofences(false)
     }
 
@@ -77,7 +80,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
     internal fun syncGeofences(force: Boolean) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSyncTime < SYNC_DEBOUNCE_MS) {
-            Log.d(TAG, "Sync skipped - too soon after last sync")
+            log.d("Sync skipped - too soon after last sync")
             return
         }
         lastSyncTime = currentTime
@@ -100,7 +103,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                 }
             }
         }
-        Log.d(TAG, "${geofences.size} geofences sync initiated.")
+        log.d("${geofences.size} geofences sync initiated.")
     }
 
     override fun getGeofenceIds(): List<String> {
@@ -118,14 +121,14 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         geofencingClient.removeGeofences(listOf(id)).run {
             addOnSuccessListener {
                 NativeGeofencePersistence.removeGeofence(context, id)
-                Log.d(TAG, "Removed Geofence ID=$id.")
+                log.d("Removed Geofence ID=$id.")
                 callback.invoke(Result.success(Unit))
             }
             addOnFailureListener {
                 val existingIds = NativeGeofencePersistence.getAllGeofenceIds(context)
                 val errorCode =
                     if (existingIds.contains(id)) NativeGeofenceErrorCode.PLUGIN_INTERNAL else NativeGeofenceErrorCode.GEOFENCE_NOT_FOUND
-                Log.e(TAG, "Failure when removing Geofence ID=$id: $it")
+                log.e("Failure when removing Geofence ID=$id", it)
                 callback.invoke(
                     Result.failure(
                         FlutterError(
@@ -142,11 +145,11 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
         geofencingClient.removeGeofences(getGeofencePendingIndent(context)).run {
             addOnSuccessListener {
                 NativeGeofencePersistence.removeAllGeofences(context)
-                Log.d(TAG, "Removed all geofences (if any).")
+                log.d("Removed all geofences (if any).")
                 callback.invoke(Result.success(Unit))
             }
             addOnFailureListener {
-                Log.e(TAG, "Failed to remove all geofences: $it")
+                log.e("Failed to remove all geofences", it)
                 callback.invoke(
                     Result.failure(
                         FlutterError(
@@ -216,11 +219,11 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                 // disabled, battery optimization, etc.). Therefore, we keep the status as PENDING
                 // and only update to ACTIVE when we receive an actual geofence event.
                 // The status will remain PENDING until the system can successfully register it.
-                Log.d(TAG, "API call succeeded for Geofence ID=${geofence.id}, status remains PENDING until first trigger.")
+                log.d("API call succeeded for Geofence ID=${geofence.id}, status remains PENDING until first trigger.")
                 callback?.invoke(Result.success(Unit))
             }
             addOnFailureListener {
-                Log.e(TAG, "Failed to add Geofence ID=${geofence.id}: $it")
+                log.e("Failed to add Geofence ID=${geofence.id}", it)
 
                 // unconditionally set status to FAILED on failure
                 val failedGeofence = geofenceStorage
@@ -230,7 +233,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
 
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
-                    Log.e(TAG, "Lacking permission: ACCESS_FINE_LOCATION")
+                    log.e("Lacking permission: ACCESS_FINE_LOCATION")
                     callback?.invoke(
                         Result.failure(
                             FlutterError(
@@ -249,7 +252,7 @@ class NativeGeofenceApiImpl(private val context: Context) : NativeGeofenceApi {
                         )
                         != PackageManager.PERMISSION_GRANTED
                     ) {
-                        Log.e(TAG, "Running on API ${Build.VERSION.SDK_INT} and lacking permission: ACCESS_BACKGROUND_LOCATION")
+                        log.e("Running on API ${Build.VERSION.SDK_INT} and lacking permission: ACCESS_BACKGROUND_LOCATION")
                         callback?.invoke(
                             Result.failure(
                                 FlutterError(

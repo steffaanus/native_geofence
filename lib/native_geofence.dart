@@ -8,7 +8,9 @@ export 'package:native_geofence/src/generated/native_geofence_api.g.dart'
         ActiveGeofence,
         GeofenceStatus,
         NativeGeofenceErrorCode,
-        GeofenceCallbackParams;
+        GeofenceCallbackParams,
+        NativeLogLevel,
+        NativeLogEntry;
 export 'package:native_geofence/src/generated/native_geofence_api.g.dart'
     show ForegroundServiceConfiguration;
 export 'package:native_geofence/src/model/location_extension.dart';

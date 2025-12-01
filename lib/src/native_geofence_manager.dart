@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:native_geofence/src/api/native_geofence_log_impl.dart';
 import 'package:native_geofence/src/callback_dispatcher.dart';
 import 'package:native_geofence/src/generated/native_geofence_api.g.dart';
 import 'package:native_geofence/src/model/location_extension.dart';
@@ -26,7 +27,10 @@ class NativeGeofenceManager {
 
   final NativeGeofenceApi _api;
 
-  NativeGeofenceManager._() : _api = NativeGeofenceApi();
+  NativeGeofenceManager._() : _api = NativeGeofenceApi() {
+    // Setup log API to receive native logs
+    NativeGeofenceLogApi.setUp(NativeGeofenceLogImpl.instance);
+  }
 
   /// Initialize the plugin.
   ///
@@ -162,4 +166,21 @@ class NativeGeofenceManager {
   Future<void> removeAllGeofences() async => _api
       .removeAllGeofences()
       .catchError(NativeGeofenceExceptionMapper.catchError<void>);
+
+  /// Stream of native log entries (warnings and errors only)
+  ///
+  /// Subscribe to this stream to receive real-time logging from the native
+  /// Swift/Kotlin implementations. Only warning and error level logs are
+  /// forwarded to reduce overhead.
+  ///
+  /// Example:
+  /// ```dart
+  /// NativeGeofenceManager.instance.nativeLogStream.listen((log) {
+  ///   final timestamp = DateTime.fromMillisecondsSinceEpoch(log.timestampMillis.toInt());
+  ///   final levelStr = log.level == NativeLogLevel.warning ? 'WARN' : 'ERROR';
+  ///   print('[$timestamp] [${log.platform}/${log.category}] $levelStr: ${log.message}');
+  /// });
+  /// ```
+  Stream<NativeLogEntry> get nativeLogStream =>
+      NativeGeofenceLogImpl.instance.logStream;
 }

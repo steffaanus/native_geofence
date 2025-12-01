@@ -94,6 +94,12 @@ enum NativeGeofenceErrorCode {
   callbackInvalid,
 }
 
+/// Log severity levels for native logging
+enum NativeLogLevel {
+  warning,
+  error,
+}
+
 class Location {
   Location({
     required this.latitude,
@@ -500,6 +506,68 @@ class ForegroundServiceConfiguration {
 ;
 }
 
+/// A log entry from native platform code
+class NativeLogEntry {
+  NativeLogEntry({
+    required this.level,
+    required this.message,
+    required this.category,
+    required this.timestampMillis,
+    this.platform,
+  });
+
+  NativeLogLevel level;
+
+  String message;
+
+  String category;
+
+  int timestampMillis;
+
+  String? platform;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      level,
+      message,
+      category,
+      timestampMillis,
+      platform,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static NativeLogEntry decode(Object result) {
+    result as List<Object?>;
+    return NativeLogEntry(
+      level: result[0]! as NativeLogLevel,
+      message: result[1]! as String,
+      category: result[2]! as String,
+      timestampMillis: result[3]! as int,
+      platform: result[4] as String?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! NativeLogEntry || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -517,26 +585,32 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is NativeGeofenceErrorCode) {
       buffer.putUint8(131);
       writeValue(buffer, value.index);
-    }    else if (value is Location) {
+    }    else if (value is NativeLogLevel) {
       buffer.putUint8(132);
-      writeValue(buffer, value.encode());
-    }    else if (value is IosGeofenceSettings) {
+      writeValue(buffer, value.index);
+    }    else if (value is Location) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is AndroidGeofenceSettings) {
+    }    else if (value is IosGeofenceSettings) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is Geofence) {
+    }    else if (value is AndroidGeofenceSettings) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is ActiveGeofence) {
+    }    else if (value is Geofence) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    }    else if (value is GeofenceCallbackParams) {
+    }    else if (value is ActiveGeofence) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    }    else if (value is ForegroundServiceConfiguration) {
+    }    else if (value is GeofenceCallbackParams) {
       buffer.putUint8(138);
+      writeValue(buffer, value.encode());
+    }    else if (value is ForegroundServiceConfiguration) {
+      buffer.putUint8(139);
+      writeValue(buffer, value.encode());
+    }    else if (value is NativeLogEntry) {
+      buffer.putUint8(140);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -556,19 +630,24 @@ class _PigeonCodec extends StandardMessageCodec {
         final int? value = readValue(buffer) as int?;
         return value == null ? null : NativeGeofenceErrorCode.values[value];
       case 132: 
-        return Location.decode(readValue(buffer)!);
+        final int? value = readValue(buffer) as int?;
+        return value == null ? null : NativeLogLevel.values[value];
       case 133: 
-        return IosGeofenceSettings.decode(readValue(buffer)!);
+        return Location.decode(readValue(buffer)!);
       case 134: 
-        return AndroidGeofenceSettings.decode(readValue(buffer)!);
+        return IosGeofenceSettings.decode(readValue(buffer)!);
       case 135: 
-        return Geofence.decode(readValue(buffer)!);
+        return AndroidGeofenceSettings.decode(readValue(buffer)!);
       case 136: 
-        return ActiveGeofence.decode(readValue(buffer)!);
+        return Geofence.decode(readValue(buffer)!);
       case 137: 
-        return GeofenceCallbackParams.decode(readValue(buffer)!);
+        return ActiveGeofence.decode(readValue(buffer)!);
       case 138: 
+        return GeofenceCallbackParams.decode(readValue(buffer)!);
+      case 139: 
         return ForegroundServiceConfiguration.decode(readValue(buffer)!);
+      case 140: 
+        return NativeLogEntry.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -797,6 +876,42 @@ abstract class NativeGeofenceTriggerApi {
               'Argument for dev.flutter.pigeon.native_geofence.NativeGeofenceTriggerApi.geofenceTriggered was null, expected non-null GeofenceCallbackParams.');
           try {
             await api.geofenceTriggered(arg_params!);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+  }
+}
+
+/// Flutter API for receiving native log entries
+abstract class NativeGeofenceLogApi {
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  Future<void> logReceived(NativeLogEntry entry);
+
+  static void setUp(NativeGeofenceLogApi? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
+    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.native_geofence.NativeGeofenceLogApi.logReceived$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.native_geofence.NativeGeofenceLogApi.logReceived was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final NativeLogEntry? arg_entry = (args[0] as NativeLogEntry?);
+          assert(arg_entry != null,
+              'Argument for dev.flutter.pigeon.native_geofence.NativeGeofenceLogApi.logReceived was null, expected non-null NativeLogEntry.');
+          try {
+            await api.logReceived(arg_entry!);
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);
