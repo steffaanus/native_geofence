@@ -13,12 +13,14 @@ import androidx.work.WorkManager
 import com.steffaanus.native_geofence.Constants
 import com.steffaanus.native_geofence.NativeGeofenceBackgroundWorker
 import com.steffaanus.native_geofence.NativeGeofenceForegroundService
+import com.steffaanus.native_geofence.api.NativeGeofenceApiImpl
 import com.steffaanus.native_geofence.generated.GeofenceCallbackParams
 import com.steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
 import com.steffaanus.native_geofence.util.GeofenceEvents
 import com.steffaanus.native_geofence.util.NativeGeofenceLogger
 import com.steffaanus.native_geofence.util.NativeGeofencePersistence
 import com.google.android.gms.location.GeofencingEvent
+import com.google.android.gms.location.GeofenceStatusCodes
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -31,6 +33,26 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             log.e("GeofencingEvent is null.")
             return
         }
+        
+        // Handle geofencing errors - critical for crash recovery
+        if (geofencingEvent.hasError()) {
+            val errorCode = geofencingEvent.errorCode
+            log.e("GeofencingEvent error. Code: $errorCode")
+            
+            // GEOFENCE_NOT_AVAILABLE (1000) means geofences were removed by the system
+            // This typically happens after:
+            // - Location process crashes
+            // - Android's Network Location Provider (NLP) is disabled
+            // - System cleared geofences due to resource constraints
+            if (errorCode == GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE) {
+                log.w("GEOFENCE_NOT_AVAILABLE error received. Location process may have crashed or NLP was disabled. Re-registering all geofences.")
+                NativeGeofenceApiImpl(context).syncGeofences(force = true)
+            } else {
+                log.e("Unhandled geofence error code: $errorCode")
+            }
+            return
+        }
+        
         val geofenceCallbackParams = getGeofenceCallbackParams(context, geofencingEvent, intent) ?: return
         val geofenceCallbackParamsStorage = GeofenceCallbackParamsStorage.fromApi(geofenceCallbackParams)
         val jsonData = Json.encodeToString(geofenceCallbackParamsStorage)
@@ -99,11 +121,6 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         geofencingEvent: GeofencingEvent,
         intent: Intent
     ): GeofenceCallbackParams? {
-        if (geofencingEvent.hasError()) {
-            log.e("GeofencingEvent has error Code=${geofencingEvent.errorCode}.")
-            return null
-        }
-
         // Get the transition type.
         val geofenceEvent = GeofenceEvents.fromInt(geofencingEvent.geofenceTransition)
         if (geofenceEvent == null) {

@@ -81,18 +81,35 @@ class NativeGeofenceApiImpl(private val context: Context, private val binaryMess
 
     internal fun syncGeofences(force: Boolean) {
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastSyncTime < SYNC_DEBOUNCE_MS) {
+        if (!force && currentTime - lastSyncTime < SYNC_DEBOUNCE_MS) {
             log.d("Sync skipped - too soon after last sync")
             return
         }
         lastSyncTime = currentTime
 
+        log.i("Starting geofence sync (force=$force)")
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
+        
+        // Count geofences by status for logging
+        var pendingCount = 0
+        var failedCount = 0
+        var activeCount = 0
+        var reregisteredCount = 0
+        
         for (geofence in geofences) {
+            when (geofence.status) {
+                GeofenceStatus.PENDING -> pendingCount++
+                GeofenceStatus.FAILED -> failedCount++
+                GeofenceStatus.ACTIVE -> activeCount++
+            }
+            
             // First remove the geofence if it exists, then re-create it.
             // This prevents errors when geofences already exist in the system.
-            // Re-try PENDING/FAILED ones.
+            // Re-try PENDING/FAILED ones, or all if force=true.
             if (force || geofence.status != GeofenceStatus.ACTIVE) {
+                log.d("Re-registering geofence ${geofence.id} (status=${geofence.status})")
+                reregisteredCount++
+                
                 geofencingClient.removeGeofences(listOf(geofence.id)).run {
                     addOnSuccessListener {
                         createGeofenceHelper(geofence.toApi(), false, null)
@@ -105,7 +122,8 @@ class NativeGeofenceApiImpl(private val context: Context, private val binaryMess
                 }
             }
         }
-        log.d("${geofences.size} geofences sync initiated.")
+        
+        log.i("Geofence sync complete. Total: ${geofences.size}, Pending: $pendingCount, Failed: $failedCount, Active: $activeCount, Re-registered: $reregisteredCount")
     }
 
     override fun getGeofenceIds(): List<String> {

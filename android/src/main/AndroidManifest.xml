@@ -13,12 +13,40 @@
     <!-- Required for ForegroundService with location type (Android 10+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
+    <!-- Required for receiving boot completed broadcasts -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application>
-        <!-- Essential declaration of the BroadcastReceiver. -->
+        <!-- Essential declaration of the BroadcastReceiver for geofence events. -->
         <receiver
             android:name="com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver"
             android:enabled="true"
             android:exported="true" />
+        
+        <!-- Receiver for boot completed and app updates to restore geofences -->
+        <!-- exported="true" required for system broadcasts (BOOT_COMPLETED, etc.) on Android 12+ -->
+        <receiver
+            android:name="com.steffaanus.native_geofence.receivers.NativeGeofenceRebootBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        
+        <!-- Receiver for location provider changes (GPS on/off) to validate geofences -->
+        <!-- exported="true" required for system broadcast (PROVIDERS_CHANGED) on Android 12+ -->
+        <receiver
+            android:name="com.steffaanus.native_geofence.receivers.NativeGeofenceLocationProviderReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.location.PROVIDERS_CHANGED" />
+            </intent-filter>
+        </receiver>
         
         <!-- ForegroundService for processing geofence events -->
         <service
