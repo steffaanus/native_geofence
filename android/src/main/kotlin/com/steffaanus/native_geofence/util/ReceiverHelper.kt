@@ -55,100 +55,6 @@ object ReceiverHelper {
             Log.w(TAG, "BinaryMessenger not available - logs won't reach Flutter app")
             NativeGeofenceApiImpl(context, null)
         }
-        
-        /**
-         * Manages retry attempts with exponential backoff for geofence operations.
-         * Prevents excessive retries that drain battery or overwhelm the system.
-         */
-        object RetryManager {
-            private const val TAG = "RetryManager"
-            private const val PREFS_KEY = "geofence_retry_state"
-            
-            private const val MAX_RETRY_COUNT = 5
-            private const val BASE_DELAY_MS = 2000L // 2 seconds
-            private const val MAX_DELAY_MS = 60000L // 60 seconds
-            private const val RESET_AFTER_MS = 3600000L // 1 hour
-            
-            /**
-             * Check if we should attempt recovery based on retry state.
-             * Uses exponential backoff: 2s, 4s, 8s, 16s, 32s, 60s (max)
-             */
-            fun shouldAttemptRecovery(context: Context, errorCode: Int): Boolean {
-                val state = getRetryState(context, errorCode)
-                
-                // Reset if it's been more than 1 hour since last attempt
-                if (System.currentTimeMillis() - state.lastAttemptTime > RESET_AFTER_MS) {
-                    resetRetryState(context, errorCode)
-                    return true
-                }
-                
-                // Check if max retries exceeded
-                if (state.attemptCount >= MAX_RETRY_COUNT) {
-                    Log.w(TAG, "Max retries ($MAX_RETRY_COUNT) exceeded for error $errorCode")
-                    return false
-                }
-                
-                // Calculate required delay with exponential backoff
-                val requiredDelay = calculateBackoffDelay(state.attemptCount)
-                val timeSinceLastAttempt = System.currentTimeMillis() - state.lastAttemptTime
-                
-                if (timeSinceLastAttempt < requiredDelay) {
-                    Log.d(TAG, "Too soon to retry (${timeSinceLastAttempt}ms < ${requiredDelay}ms)")
-                    return false
-                }
-                
-                return true
-            }
-            
-            /**
-             * Record a retry attempt.
-             */
-            fun recordRetryAttempt(context: Context, errorCode: Int) {
-                val state = getRetryState(context, errorCode)
-                val newAttemptCount = state.attemptCount + 1
-                saveRetryState(context, errorCode, newAttemptCount, System.currentTimeMillis())
-                
-                Log.d(TAG, "Recorded retry attempt $newAttemptCount/$MAX_RETRY_COUNT for error $errorCode")
-            }
-            
-            /**
-             * Reset retry state after successful recovery.
-             */
-            fun resetRetryState(context: Context, errorCode: Int) {
-                val prefs = context.getSharedPreferences(PREFS_KEY, Context.MODE_PRIVATE)
-                prefs.edit()
-                    .remove("retry_${errorCode}_count")
-                    .remove("retry_${errorCode}_time")
-                    .apply()
-                Log.d(TAG, "Reset retry state for error $errorCode")
-            }
-            
-            private fun calculateBackoffDelay(attemptCount: Int): Long {
-                if (attemptCount == 0) return 0L
-                val delay = BASE_DELAY_MS * (1 shl attemptCount) // 2^attemptCount
-                return minOf(delay, MAX_DELAY_MS)
-            }
-            
-            private data class RetryState(
-                val attemptCount: Int,
-                val lastAttemptTime: Long
-            )
-            
-            private fun getRetryState(context: Context, errorCode: Int): RetryState {
-                val prefs = context.getSharedPreferences(PREFS_KEY, Context.MODE_PRIVATE)
-                val attemptCount = prefs.getInt("retry_${errorCode}_count", 0)
-                val lastAttemptTime = prefs.getLong("retry_${errorCode}_time", 0)
-                return RetryState(attemptCount, lastAttemptTime)
-            }
-            
-            private fun saveRetryState(context: Context, errorCode: Int, attemptCount: Int, timestamp: Long) {
-                val prefs = context.getSharedPreferences(PREFS_KEY, Context.MODE_PRIVATE)
-                prefs.edit()
-                    .putInt("retry_${errorCode}_count", attemptCount)
-                    .putLong("retry_${errorCode}_time", timestamp)
-                    .apply()
-            }
-        }
     }
     
     /**
@@ -177,5 +83,99 @@ object ReceiverHelper {
         }
         
         return gpsEnabled || networkEnabled
+    }
+}
+
+/**
+ * Manages retry attempts with exponential backoff for geofence operations.
+ * Prevents excessive retries that drain battery or overwhelm the system.
+ */
+object RetryManager {
+    private const val TAG = "RetryManager"
+    private const val PREFS_KEY = "geofence_retry_state"
+    
+    private const val MAX_RETRY_COUNT = 5
+    private const val BASE_DELAY_MS = 2000L // 2 seconds
+    private const val MAX_DELAY_MS = 60000L // 60 seconds
+    private const val RESET_AFTER_MS = 3600000L // 1 hour
+    
+    /**
+     * Check if we should attempt recovery based on retry state.
+     * Uses exponential backoff: 2s, 4s, 8s, 16s, 32s, 60s (max)
+     */
+    fun shouldAttemptRecovery(context: Context, errorCode: Int): Boolean {
+        val state = getRetryState(context, errorCode)
+        
+        // Reset if it's been more than 1 hour since last attempt
+        if (System.currentTimeMillis() - state.lastAttemptTime > RESET_AFTER_MS) {
+            resetRetryState(context, errorCode)
+            return true
+        }
+        
+        // Check if max retries exceeded
+        if (state.attemptCount >= MAX_RETRY_COUNT) {
+            Log.w(TAG, "Max retries ($MAX_RETRY_COUNT) exceeded for error $errorCode")
+            return false
+        }
+        
+        // Calculate required delay with exponential backoff
+        val requiredDelay = calculateBackoffDelay(state.attemptCount)
+        val timeSinceLastAttempt = System.currentTimeMillis() - state.lastAttemptTime
+        
+        if (timeSinceLastAttempt < requiredDelay) {
+            Log.d(TAG, "Too soon to retry (${timeSinceLastAttempt}ms < ${requiredDelay}ms)")
+            return false
+        }
+        
+        return true
+    }
+    
+    /**
+     * Record a retry attempt.
+     */
+    fun recordRetryAttempt(context: Context, errorCode: Int) {
+        val state = getRetryState(context, errorCode)
+        val newAttemptCount = state.attemptCount + 1
+        saveRetryState(context, errorCode, newAttemptCount, System.currentTimeMillis())
+        
+        Log.d(TAG, "Recorded retry attempt $newAttemptCount/$MAX_RETRY_COUNT for error $errorCode")
+    }
+    
+    /**
+     * Reset retry state after successful recovery.
+     */
+    fun resetRetryState(context: Context, errorCode: Int) {
+        val prefs = context.getSharedPreferences(PREFS_KEY, Context.MODE_PRIVATE)
+        prefs.edit()
+            .remove("retry_${errorCode}_count")
+            .remove("retry_${errorCode}_time")
+            .apply()
+        Log.d(TAG, "Reset retry state for error $errorCode")
+    }
+    
+    private fun calculateBackoffDelay(attemptCount: Int): Long {
+        if (attemptCount == 0) return 0L
+        val delay = BASE_DELAY_MS * (1 shl attemptCount) // 2^attemptCount
+        return minOf(delay, MAX_DELAY_MS)
+    }
+    
+    data class RetryState(
+        val attemptCount: Int,
+        val lastAttemptTime: Long
+    )
+    
+    private fun getRetryState(context: Context, errorCode: Int): RetryState {
+        val prefs = context.getSharedPreferences(PREFS_KEY, Context.MODE_PRIVATE)
+        val attemptCount = prefs.getInt("retry_${errorCode}_count", 0)
+        val lastAttemptTime = prefs.getLong("retry_${errorCode}_time", 0)
+        return RetryState(attemptCount, lastAttemptTime)
+    }
+    
+    private fun saveRetryState(context: Context, errorCode: Int, attemptCount: Int, timestamp: Long) {
+        val prefs = context.getSharedPreferences(PREFS_KEY, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putInt("retry_${errorCode}_count", attemptCount)
+            .putLong("retry_${errorCode}_time", timestamp)
+            .apply()
     }
 }

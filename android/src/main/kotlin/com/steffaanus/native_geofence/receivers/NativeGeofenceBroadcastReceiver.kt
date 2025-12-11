@@ -19,6 +19,7 @@ import com.steffaanus.native_geofence.util.GeofenceEvents
 import com.steffaanus.native_geofence.util.NativeGeofenceLogger
 import com.steffaanus.native_geofence.util.NativeGeofencePersistence
 import com.steffaanus.native_geofence.util.ReceiverHelper
+import com.steffaanus.native_geofence.util.RetryManager
 import com.google.android.gms.location.GeofencingEvent
 import com.google.android.gms.location.GeofenceStatusCodes
 import kotlinx.serialization.encodeToString
@@ -210,19 +211,19 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         }
         
         // Check retry state
-        if (!ReceiverHelper.RetryManager.shouldAttemptRecovery(context, GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)) {
+        if (!RetryManager.shouldAttemptRecovery(context, GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)) {
             log.w("Maximum retries exceeded or too soon to retry")
             return
         }
         
         log.i("Attempting geofence recovery after location crash")
-        ReceiverHelper.RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)
+        RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)
         
         val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
         apiImpl.syncGeofences(force = true)
         
         // Reset retry state on successful sync
-        ReceiverHelper.RetryManager.resetRetryState(context, GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)
+        RetryManager.resetRetryState(context, GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)
     }
     
     /**
@@ -247,13 +248,13 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         log.w("TOO_MANY_PENDING_INTENTS - Multiple apps using geofences")
         
         // Check retry state with exponential backoff
-        if (!ReceiverHelper.RetryManager.shouldAttemptRecovery(context, GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS)) {
+        if (!RetryManager.shouldAttemptRecovery(context, GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS)) {
             log.w("Too soon to retry or max retries exceeded")
             return
         }
         
         log.i("Retrying geofence registration after backoff delay")
-        ReceiverHelper.RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS)
+        RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS)
         
         val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
         apiImpl.syncGeofences(force = true)
@@ -265,13 +266,13 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
     private fun handleGenericError(context: Context, errorCode: Int) {
         log.w("Generic geofence error: $errorCode")
         
-        if (!ReceiverHelper.RetryManager.shouldAttemptRecovery(context, errorCode)) {
+        if (!RetryManager.shouldAttemptRecovery(context, errorCode)) {
             log.w("Skipping retry due to backoff policy")
             return
         }
         
         log.i("Retrying geofence sync after generic error")
-        ReceiverHelper.RetryManager.recordRetryAttempt(context, errorCode)
+        RetryManager.recordRetryAttempt(context, errorCode)
         
         val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
         apiImpl.syncGeofences(force = true)
@@ -284,11 +285,11 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         log.w("Location service timeout - may indicate temporary connectivity issues")
         
         // Timeout is often temporary, use more aggressive retry
-        if (!ReceiverHelper.RetryManager.shouldAttemptRecovery(context, GeofenceStatusCodes.TIMEOUT)) {
+        if (!RetryManager.shouldAttemptRecovery(context, GeofenceStatusCodes.TIMEOUT)) {
             return
         }
         
-        ReceiverHelper.RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.TIMEOUT)
+        RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.TIMEOUT)
         
         val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
         apiImpl.syncGeofences(force = true)
@@ -300,11 +301,11 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
     private fun handleInterrupted(context: Context) {
         log.w("Geofence operation interrupted - will retry")
         
-        if (!ReceiverHelper.RetryManager.shouldAttemptRecovery(context, GeofenceStatusCodes.INTERRUPTED)) {
+        if (!RetryManager.shouldAttemptRecovery(context, GeofenceStatusCodes.INTERRUPTED)) {
             return
         }
         
-        ReceiverHelper.RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.INTERRUPTED)
+        RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.INTERRUPTED)
         
         val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
         apiImpl.syncGeofences(force = true)

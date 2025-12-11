@@ -46,7 +46,7 @@
 
         <!-- Used by plugin: native_geofence -->
         <receiver android:name="com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver"
-                  android:exported="true"/>
+                  android:exported="false"/>
         <receiver android:name="com.steffaanus.native_geofence.receivers.NativeGeofenceRebootBroadcastReceiver"
                   android:exported="true">
             <intent-filter>
