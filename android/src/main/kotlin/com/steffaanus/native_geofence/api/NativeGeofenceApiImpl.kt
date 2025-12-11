@@ -105,42 +105,137 @@ class NativeGeofenceApiImpl(private val context: Context, private val binaryMess
      * @param force If true, re-register ALL geofences. If false, only re-register PENDING/FAILED ones.
      */
     private fun performSyncGeofences(force: Boolean) {
-        val geofences = NativeGeofencePersistence.getAllGeofences(context)
+        val startTime = System.currentTimeMillis()
+        val allGeofences = NativeGeofencePersistence.getAllGeofences(context)
+        
+        // Determine which geofences need re-registration
+        val toReregister = if (force) {
+            allGeofences
+        } else {
+            allGeofences.filter { it.status != GeofenceStatus.ACTIVE }
+        }
+        
+        if (toReregister.isEmpty()) {
+            log.d("No geofences need re-registration")
+            return
+        }
         
         // Count geofences by status for logging
-        var pendingCount = 0
-        var failedCount = 0
-        var activeCount = 0
-        var reregisteredCount = 0
+        val pendingCount = allGeofences.count { it.status == GeofenceStatus.PENDING }
+        val failedCount = allGeofences.count { it.status == GeofenceStatus.FAILED }
+        val activeCount = allGeofences.count { it.status == GeofenceStatus.ACTIVE }
         
-        for (geofence in geofences) {
-            when (geofence.status) {
-                GeofenceStatus.PENDING -> pendingCount++
-                GeofenceStatus.FAILED -> failedCount++
-                GeofenceStatus.ACTIVE -> activeCount++
+        log.i("Starting batch re-registration of ${toReregister.size} geofences (Total: ${allGeofences.size}, Pending: $pendingCount, Failed: $failedCount, Active: $activeCount)")
+        
+        // Try batch operation first for best performance
+        tryBatchOperation(toReregister, startTime)
+    }
+    
+    /**
+     * Attempt batch remove and add for optimal performance.
+     * Falls back to individual operations if batch fails.
+     */
+    @SuppressLint("MissingPermission")
+    private fun tryBatchOperation(geofences: List<GeofenceStorage>, startTime: Long) {
+        val idsToRemove = geofences.map { it.id }
+        
+        log.d("Batch removing ${idsToRemove.size} geofences")
+        
+        // Step 1: Batch remove
+        geofencingClient.removeGeofences(idsToRemove).run {
+            addOnCompleteListener { removeTask ->
+                if (removeTask.isSuccessful) {
+                    log.d("Batch remove succeeded for ${idsToRemove.size} geofences")
+                } else {
+                    log.w("Batch remove failed: ${removeTask.exception?.message}")
+                }
+                
+                // Continue to add regardless of remove result (some may have been removed)
+                // Step 2: Batch add
+                batchAddGeofences(geofences, startTime)
+            }
+        }
+    }
+    
+    /**
+     * Attempt to add mult geofences in a single batch operation.
+     * Falls back to individual operations if batch fails.
+     */
+    @SuppressLint("MissingPermission")
+    private fun batchAddGeofences(geofences: List<GeofenceStorage>, startTime: Long) {
+        log.d("Batch adding ${geofences.size} geofences")
+        
+        // Build geofencing request with all geofences
+        val request = GeofencingRequest.Builder().apply {
+            geofences.forEach { geofence ->
+                val apiGeofence = geofence.toApi()
+                setInitialTrigger(GeofenceEvents.createMask(apiGeofence.androidSettings.initialTriggers))
+                addGeofence(apiGeofence.toGeofence(context))
+            }
+        }.build()
+        
+        geofencingClient.addGeofences(request, getGeofencePendingIndent(context)).run {
+            addOnSuccessListener {
+                // BEST CASE: All geofences added successfully via batch
+                val duration = System.currentTimeMillis() - startTime
+                log.i("✅ Batch operation succeeded in ${duration}ms for ${geofences.size} geofences")
+                
+                // Update all statuses to PENDING
+                geofences.forEach { geofence ->
+                    geofence.status = GeofenceStatus.PENDING
+                    geofence.statusChangedAtMillis = System.currentTimeMillis()
+                    NativeGeofencePersistence.saveOrUpdateGeofence(context, geofence)
+                }
             }
             
-            // First remove the geofence if it exists, then re-create it.
-            // This prevents errors when geofences already exist in the system.
-            // Re-try PENDING/FAILED ones, or all if force=true.
-            if (force || geofence.status != GeofenceStatus.ACTIVE) {
-                log.d("Re-registering geofence ${geofence.id} (status=${geofence.status})")
-                reregisteredCount++
+            addOnFailureListener { batchException ->
+                // FALLBACK: Batch failed, try individual operations
+                val duration = System.currentTimeMillis() - startTime
+                log.w("❌ Batch add failed after ${duration}ms: ${batchException.message}")
+                log.i("Falling back to individual operations for ${geofences.size} geofences")
                 
-                geofencingClient.removeGeofences(listOf(geofence.id)).run {
-                    addOnSuccessListener {
-                        createGeofenceHelper(geofence.toApi(), false, null)
-                    }
-                    addOnFailureListener {
-                        // If the geofence does not exist, this call will fail.
-                        // In that case, we can ignore the error and just create the geofence.
-                        createGeofenceHelper(geofence.toApi(), false, null)
+                fallbackToIndividualOperations(geofences, startTime)
+            }
+        }
+    }
+    
+    /**
+     * Fallback to individual operations when batch fails.
+     * Ensures maximum resilience - each geofence is tried individually.
+     */
+    private fun fallbackToIndividualOperations(geofences: List<GeofenceStorage>, overallStartTime: Long) {
+        var successCount = 0
+        var failureCount = 0
+        val totalCount = geofences.size
+        
+        geofences.forEach { geofence ->
+            // Remove then add each geofence individually
+            geofencingClient.removeGeofences(listOf(geofence.id)).run {
+                addOnCompleteListener { removeTask ->
+                    // Continue to add regardless of remove result
+                    createGeofenceHelper(geofence.toApi(), false) { result ->
+                        if (result.isSuccess) {
+                            successCount++
+                            log.d("✅ Individual operation succeeded for ${geofence.id} ($successCount/$totalCount)")
+                        } else {
+                            failureCount++
+                            // Status already set to FAILED by createGeofenceHelper
+                            log.e("❌ Individual operation failed for ${geofence.id} ($failureCount/$totalCount)")
+                        }
+                        
+                        // Log summary when all operations complete
+                        if (successCount + failureCount == totalCount) {
+                            val totalDuration = System.currentTimeMillis() - overallStartTime
+                            log.i("Individual operations complete in ${totalDuration}ms: $successCount success, $failureCount failed out of $totalCount")
+                            
+                            if (failureCount > totalCount / 2) {
+                                log.e("⚠️ More than 50% of geofences failed - possible permission or system issue")
+                            }
+                        }
                     }
                 }
             }
         }
-        
-        log.i("Geofence sync complete. Total: ${geofences.size}, Pending: $pendingCount, Failed: $failedCount, Active: $activeCount, Re-registered: $reregisteredCount")
     }
 
     override fun getGeofenceIds(): List<String> {
