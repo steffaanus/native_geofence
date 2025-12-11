@@ -18,10 +18,12 @@
 
     <application>
         <!-- Essential declaration of the BroadcastReceiver for geofence events. -->
+        <!-- exported="false" because this receiver is triggered via PendingIntent, not system broadcasts -->
+        <!-- This improves security by preventing other apps from triggering our geofence events -->
         <receiver
             android:name="com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="false" />
         
         <!-- Receiver for boot completed and app updates to restore geofences -->
         <!-- exported="true" required for system broadcasts (BOOT_COMPLETED, etc.) on Android 12+ -->

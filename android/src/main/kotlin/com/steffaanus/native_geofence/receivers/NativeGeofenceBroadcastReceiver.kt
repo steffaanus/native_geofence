@@ -13,12 +13,12 @@ import androidx.work.WorkManager
 import com.steffaanus.native_geofence.Constants
 import com.steffaanus.native_geofence.NativeGeofenceBackgroundWorker
 import com.steffaanus.native_geofence.NativeGeofenceForegroundService
-import com.steffaanus.native_geofence.api.NativeGeofenceApiImpl
 import com.steffaanus.native_geofence.generated.GeofenceCallbackParams
 import com.steffaanus.native_geofence.model.GeofenceCallbackParamsStorage
 import com.steffaanus.native_geofence.util.GeofenceEvents
 import com.steffaanus.native_geofence.util.NativeGeofenceLogger
 import com.steffaanus.native_geofence.util.NativeGeofencePersistence
+import com.steffaanus.native_geofence.util.ReceiverHelper
 import com.google.android.gms.location.GeofencingEvent
 import com.google.android.gms.location.GeofenceStatusCodes
 import kotlinx.serialization.encodeToString
@@ -45,10 +45,22 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
             // - Android's Network Location Provider (NLP) is disabled
             // - System cleared geofences due to resource constraints
             if (errorCode == GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE) {
-                log.w("GEOFENCE_NOT_AVAILABLE error received. Location process may have crashed or NLP was disabled. Re-registering all geofences.")
-                NativeGeofenceApiImpl(context).syncGeofences(force = true)
+                log.w("GEOFENCE_NOT_AVAILABLE error received. Location process may have crashed or NLP was disabled.")
+                
+                // Validate location services are available before attempting recovery
+                if (!ReceiverHelper.isLocationAvailable(context)) {
+                    log.w("Location services are disabled - cannot recover geofences until location is re-enabled")
+                    // LocationProviderReceiver will handle recovery when location is re-enabled
+                    return
+                }
+                
+                log.i("Location services available - re-registering all geofences for crash recovery")
+                // Use ReceiverHelper to create ApiImpl with logging support
+                val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
+                apiImpl.syncGeofences(force = true)
             } else {
-                log.e("Unhandled geofence error code: $errorCode")
+                log.e("Unhandled geofence error code: $errorCode - ignoring")
+                // TODO: Consider handling other error codes like GEOFENCE_TOO_MANY_GEOFENCES
             }
             return
         }

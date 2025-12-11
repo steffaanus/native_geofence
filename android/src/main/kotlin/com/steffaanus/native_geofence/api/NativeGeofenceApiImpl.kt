@@ -80,14 +80,31 @@ class NativeGeofenceApiImpl(private val context: Context, private val binaryMess
     }
 
     internal fun syncGeofences(force: Boolean) {
+        // Force sync bypasses ALL debounce checks for critical recovery scenarios
+        if (force) {
+            log.i("Force sync requested - bypassing debounce for critical recovery")
+            performSyncGeofences(true)
+            lastSyncTime = System.currentTimeMillis()
+            return
+        }
+        
+        // Normal sync with debounce protection
         val currentTime = System.currentTimeMillis()
-        if (!force && currentTime - lastSyncTime < SYNC_DEBOUNCE_MS) {
-            log.d("Sync skipped - too soon after last sync")
+        if (currentTime - lastSyncTime < SYNC_DEBOUNCE_MS) {
+            log.d("Sync skipped - too soon after last sync (${currentTime - lastSyncTime}ms < ${SYNC_DEBOUNCE_MS}ms)")
             return
         }
         lastSyncTime = currentTime
-
+        
         log.i("Starting geofence sync (force=$force)")
+        performSyncGeofences(false)
+    }
+    
+    /**
+     * Perform the actual sync operation - refactored to allow force bypass
+     * @param force If true, re-register ALL geofences. If false, only re-register PENDING/FAILED ones.
+     */
+    private fun performSyncGeofences(force: Boolean) {
         val geofences = NativeGeofencePersistence.getAllGeofences(context)
         
         // Count geofences by status for logging
