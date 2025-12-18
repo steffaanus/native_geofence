@@ -187,29 +187,6 @@ enum NativeGeofenceErrorCode {
   callbackInvalid,
 }
 
-/// Log severity levels for native logging
-enum NativeLogLevel {
-  warning,
-  error,
-}
-
-/// A log entry from native platform code
-class NativeLogEntry {
-  final NativeLogLevel level;
-  final String message;
-  final String category;
-  final int timestampMillis;
-  final String? platform;
-
-  NativeLogEntry({
-    required this.level,
-    required this.message,
-    required this.category,
-    required this.timestampMillis,
-    this.platform,
-  });
-}
-
 @HostApi()
 abstract class NativeGeofenceApi {
   void initialize({
@@ -240,11 +217,4 @@ abstract class NativeGeofenceBackgroundApi {
 abstract class NativeGeofenceTriggerApi {
   @async
   void geofenceTriggered(GeofenceCallbackParams params);
-}
-
-/// Flutter API for receiving native log entries
-@FlutterApi()
-abstract class NativeGeofenceLogApi {
-  @async
-  void logReceived(NativeLogEntry entry);
 }

@@ -1,3 +1,21 @@
+## 2.4.1
+
+**Stability & Simplification**
+
+### Breaking Changes
+*   **Removed:** Native-to-Flutter logging functionality has been removed due to stability issues causing crashes. The `nativeLogStream` API is no longer available.
+*   **Migration:** Remove any code that subscribes to `nativeLogStream`. Native logs are now only available through platform-specific debugging tools:
+   *   **Android:** Use Android Studio's Logcat or `adb logcat | grep NativeGeofence`
+   *   **iOS:** Use Xcode's Console or Console.app and filter by subsystem `com.steffaanus.native_geofence`
+
+### Improvements
+*   **Fix:** Eliminated crashes caused by native-to-Flutter logging communication, particularly during background events and engine lifecycle transitions.
+*   **Improvement:** Significantly reduced plugin complexity by removing logging infrastructure (buffering, threading, channel communication).
+*   **Improvement:** Better performance due to removal of Flutter channel overhead for logging.
+*   **Improvement:** Native logs remain fully available via standard platform debugging tools (Logcat, OSLog).
+
+---
+
 ## 2.4.0
 
 **Major Android Crash Recovery & Performance Improvements**

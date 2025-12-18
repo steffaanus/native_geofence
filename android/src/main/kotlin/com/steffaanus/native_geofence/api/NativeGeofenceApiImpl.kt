@@ -17,7 +17,6 @@ import com.steffaanus.native_geofence.generated.Geofence
 import com.steffaanus.native_geofence.generated.GeofenceStatus
 import com.steffaanus.native_geofence.generated.NativeGeofenceApi
 import com.steffaanus.native_geofence.generated.NativeGeofenceErrorCode
-import com.steffaanus.native_geofence.generated.NativeGeofenceLogApi
 import com.steffaanus.native_geofence.util.GeofenceEvents
 import com.steffaanus.native_geofence.util.NativeGeofenceLogger
 import com.steffaanus.native_geofence.receivers.NativeGeofenceBroadcastReceiver
@@ -37,12 +36,6 @@ class NativeGeofenceApiImpl(private val context: Context, private val binaryMess
         callbackDispatcherHandle: Long,
         foregroundServiceConfig: ForegroundServiceConfiguration?
     ) {
-        // Setup log forwarding to Flutter (only when binaryMessenger is available)
-        if (binaryMessenger != null) {
-            val logApi = NativeGeofenceLogApi(binaryMessenger)
-            NativeGeofenceLogger.setFlutterLogApi(logApi)
-        }
-        
         val prefs = context.getSharedPreferences(Constants.SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE)
         val editor = prefs.edit()
         

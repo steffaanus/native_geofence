@@ -27,10 +27,6 @@ public class NativeGeofenceApiImpl: NSObject, NativeGeofenceApi {
     ) throws {
         NativeGeofencePersistence.setCallbackDispatcherHandle(callbackDispatcherHandle)
         
-        // Setup log forwarding to Flutter
-        let logApi = NativeGeofenceLogApi(binaryMessenger: binaryMessenger)
-        NativeGeofenceLogger.setFlutterLogApi(logApi)
-        
         // Note: foregroundServiceConfig is for Android only and is not used on iOS
         // as iOS does not have an equivalent foreground service notification.
         
