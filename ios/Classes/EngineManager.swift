@@ -25,13 +25,12 @@ class EngineManager {
             return
         }
         
+        // Acquire lock BEFORE any checks to ensure atomicity
         lock.lock()
-        defer {
-            lock.unlock()
-        }
-
+        
         // Check if engine already exists AND backgroundApi is ready
         if headlessEngine != nil && backgroundApi != nil {
+            lock.unlock()  // Release lock before calling completion
             log.debug("Engine and background API already ready.")
             completion?()
             return
@@ -43,6 +42,7 @@ class EngineManager {
             if let completion = completion {
                 pendingCompletions.append(completion)
             }
+            lock.unlock()  // Release lock
             return
         }
         
@@ -52,11 +52,15 @@ class EngineManager {
             if let completion = completion {
                 pendingCompletions.append(completion)
             }
+            lock.unlock()  // Release lock
             return
         }
         
-        // Mark that we're starting the engine
+        // CRITICAL: Mark that we're starting the engine WHILE HOLDING LOCK
+        // This prevents race conditions where multiple threads could create multiple engines
         isStarting = true
+        lock.unlock()  // NOW we can release the lock
+        
         log.debug("Starting new Flutter engine...")
         
         headlessEngine = FlutterEngine(name: Constants.HEADLESS_FLUTTER_ENGINE_NAME, project: nil, allowHeadlessExecution: true)
