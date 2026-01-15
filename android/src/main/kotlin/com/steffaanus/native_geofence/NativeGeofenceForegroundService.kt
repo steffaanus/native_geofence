@@ -106,6 +106,9 @@ class NativeGeofenceForegroundService : Service() {
             Constants.ACTION_PROCESS_GEOFENCE -> {
                 handleGeofenceEvent(intent)
             }
+            Constants.ACTION_SYNC_GEOFENCES -> {
+                handleSyncGeofences(intent)
+            }
             Constants.ACTION_SHUTDOWN -> {
                 Log.d(TAG, "Shutdown requested")
                 stopSelfAndCleanup()
@@ -157,6 +160,28 @@ class NativeGeofenceForegroundService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse geofence callback params: ${e.message}", e)
         }
+    }
+
+    /**
+     * Handle geofence sync operation using the service's own FlutterEngine and BinaryMessenger.
+     * This prevents JNI crashes that occur when using an invalid BinaryMessenger from BroadcastReceiver context.
+     */
+    private fun handleSyncGeofences(intent: Intent) {
+        val force = intent.getBooleanExtra(Constants.EXTRA_FORCE_SYNC, false)
+        Log.d(TAG, "Geofence sync requested (force=$force)")
+        
+        // Use the service's own NativeGeofenceApiImpl with the service's BinaryMessenger
+        // This ensures we have a valid main thread context and prevents JNI crashes
+        val apiImpl = com.steffaanus.native_geofence.api.NativeGeofenceApiImpl(
+            applicationContext,
+            flutterEngine?.dartExecutor?.binaryMessenger
+        )
+        
+        apiImpl.syncGeofences(force)
+        
+        // Stop service after sync is complete
+        Log.d(TAG, "Geofence sync completed, stopping service")
+        stopSelf()
     }
 
     /**

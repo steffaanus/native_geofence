@@ -219,8 +219,23 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         log.i("Attempting geofence recovery after location crash")
         RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)
         
-        val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
-        apiImpl.syncGeofences(force = true)
+        // FIX: Start foreground service to handle sync with valid BinaryMessenger
+        // This prevents JNI crashes that occur when using an invalid BinaryMessenger from BroadcastReceiver context
+        val serviceIntent = Intent(context, NativeGeofenceForegroundService::class.java).apply {
+            action = Constants.ACTION_SYNC_GEOFENCES
+            putExtra(Constants.EXTRA_FORCE_SYNC, true)
+        }
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            log.d("Started foreground service for geofence recovery")
+        } catch (e: Exception) {
+            log.e("Failed to start foreground service for recovery", e)
+        }
         
         // Reset retry state on successful sync
         RetryManager.resetRetryState(context, GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)
@@ -256,8 +271,22 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         log.i("Retrying geofence registration after backoff delay")
         RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS)
         
-        val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
-        apiImpl.syncGeofences(force = true)
+        // FIX: Use foreground service instead of direct API call to prevent JNI crashes
+        val serviceIntent = Intent(context, NativeGeofenceForegroundService::class.java).apply {
+            action = Constants.ACTION_SYNC_GEOFENCES
+            putExtra(Constants.EXTRA_FORCE_SYNC, true)
+        }
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            log.d("Started foreground service for retry")
+        } catch (e: Exception) {
+            log.e("Failed to start foreground service for retry", e)
+        }
     }
     
     /**
@@ -274,8 +303,22 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         log.i("Retrying geofence sync after generic error")
         RetryManager.recordRetryAttempt(context, errorCode)
         
-        val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
-        apiImpl.syncGeofences(force = true)
+        // FIX: Use foreground service instead of direct API call to prevent JNI crashes
+        val serviceIntent = Intent(context, NativeGeofenceForegroundService::class.java).apply {
+            action = Constants.ACTION_SYNC_GEOFENCES
+            putExtra(Constants.EXTRA_FORCE_SYNC, true)
+        }
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            log.d("Started foreground service for retry after generic error")
+        } catch (e: Exception) {
+            log.e("Failed to start foreground service for retry", e)
+        }
     }
     
     /**
@@ -291,8 +334,22 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         
         RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.TIMEOUT)
         
-        val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
-        apiImpl.syncGeofences(force = true)
+        // FIX: Use foreground service instead of direct API call to prevent JNI crashes
+        val serviceIntent = Intent(context, NativeGeofenceForegroundService::class.java).apply {
+            action = Constants.ACTION_SYNC_GEOFENCES
+            putExtra(Constants.EXTRA_FORCE_SYNC, true)
+        }
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            log.d("Started foreground service for retry after timeout")
+        } catch (e: Exception) {
+            log.e("Failed to start foreground service for retry", e)
+        }
     }
     
     /**
@@ -307,8 +364,22 @@ class NativeGeofenceBroadcastReceiver : BroadcastReceiver() {
         
         RetryManager.recordRetryAttempt(context, GeofenceStatusCodes.INTERRUPTED)
         
-        val apiImpl = ReceiverHelper.createApiImplWithLogging(context)
-        apiImpl.syncGeofences(force = true)
+        // FIX: Use foreground service instead of direct API call to prevent JNI crashes
+        val serviceIntent = Intent(context, NativeGeofenceForegroundService::class.java).apply {
+            action = Constants.ACTION_SYNC_GEOFENCES
+            putExtra(Constants.EXTRA_FORCE_SYNC, true)
+        }
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            log.d("Started foreground service for retry after interrupt")
+        } catch (e: Exception) {
+            log.e("Failed to start foreground service for retry", e)
+        }
     }
     
     /**

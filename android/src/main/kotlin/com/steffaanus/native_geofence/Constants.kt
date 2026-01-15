@@ -13,11 +13,13 @@ class Constants {
 
         const val ACTION_SHUTDOWN = "SHUTDOWN"
         const val ACTION_PROCESS_GEOFENCE = "PROCESS_GEOFENCE"
+        const val ACTION_SYNC_GEOFENCES = "SYNC_GEOFENCES"
 
         const val WORKER_PAYLOAD_KEY = "$PACKAGE_NAME.worker_payload"
         const val GEOFENCE_CALLBACK_WORK_GROUP = "geofence_callback_work_group"
         
         const val EXTRA_GEOFENCE_CALLBACK_PARAMS = "$PACKAGE_NAME.geofence_callback_params"
+        const val EXTRA_FORCE_SYNC = "force_sync"
 
         const val ISOLATE_HOLDER_WAKE_LOCK_TAG = "$PACKAGE_NAME:wake_lock"
         
