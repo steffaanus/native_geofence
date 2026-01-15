@@ -1,8 +1,8 @@
 package com.steffaanus.native_geofence
 
 import android.app.Service
-import android.app.ServiceInfo
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.content.Intent
 import android.os.Handler
 import android.os.IBinder
