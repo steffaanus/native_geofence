@@ -1,6 +1,7 @@
 package com.steffaanus.native_geofence
 
 import android.app.Service
+import android.app.ServiceInfo
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -81,7 +82,7 @@ class NativeGeofenceForegroundService : Service() {
         
         // Start foreground with notification
         val notification = Notifications.createForegroundServiceNotification(this)
-        startForeground(NOTIFICATION_ID, notification)
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
         
         // Acquire wake lock to prevent CPU sleep during processing
         (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
