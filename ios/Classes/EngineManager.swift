@@ -78,46 +78,53 @@ class EngineManager {
             return
         }
         
-        // CRITICAL FIX: Set up APIs BEFORE starting Flutter engine
-        // This prevents race condition where Flutter calls triggerApiInitialized() before API is ready
+        // CRITICAL FIX: Start Flutter engine BEFORE setting up message handlers
+        // This is required by Flutter - message handlers cannot be set before engine runs
+        headlessEngine!.run(withEntrypoint: callbackInfo.callbackName, libraryURI: callbackInfo.callbackLibraryPath)
+        log.debug("Flutter engine started.")
         
-        let api = NativeGeofenceBackgroundApiImpl(binaryMessenger: headlessEngine!.binaryMessenger)
-        
-        // Set onInitialized callback BEFORE calling setUp()
-        api.onInitialized = { [weak self] in
+        // CRITICAL: Wait a short time for Flutter engine to initialize before setting up message handlers
+        // This prevents race condition where Flutter calls triggerApiInitialized() before handlers are ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let self = self else { return }
             
-            self.lock.lock()
-            self.backgroundApi = api
-            self.isStarting = false
-            self.log.debug("NativeGeofenceBackgroundApi is ready.")
+            // Now set up the message handlers after engine is running
+            let api = NativeGeofenceBackgroundApiImpl(binaryMessenger: self.headlessEngine!.binaryMessenger)
             
-            // Collect all pending completions
-            let allCompletions = self.pendingCompletions + (completion != nil ? [completion!] : [])
-            self.pendingCompletions.removeAll()
-            
-            self.log.debug("Executing \(allCompletions.count) pending completion handler(s)")
-            self.lock.unlock()
+            // Set onInitialized callback BEFORE calling setUp()
+            api.onInitialized = { [weak self] in
+                guard let self = self else { return }
+                
+                self.lock.lock()
+                self.backgroundApi = api
+                self.isStarting = false
+                self.log.debug("NativeGeofenceBackgroundApi is ready.")
+                
+                // Collect all pending completions
+                let allCompletions = self.pendingCompletions + (completion != nil ? [completion!] : [])
+                self.pendingCompletions.removeAll()
+                
+                self.log.debug("Executing \(allCompletions.count) pending completion handler(s)")
+                self.lock.unlock()
 
-            // Execute all completion handlers now that the background API is fully initialized
-            for completionHandler in allCompletions {
-                completionHandler()
+                // Execute all completion handlers now that the background API is fully initialized
+                for completionHandler in allCompletions {
+                    completionHandler()
+                }
             }
+
+            NativeGeofenceBackgroundApiSetup.setUp(binaryMessenger: self.headlessEngine!.binaryMessenger, api: api)
+            self.log.debug("NativeGeofenceBackgroundApi setup called.")
+
+            // Also register the main NativeGeofenceApi in background context
+            let nativeGeofenceMainApi = NativeGeofenceApiImpl(registerPlugins: registrant, binaryMessenger: self.headlessEngine!.binaryMessenger)
+            NativeGeofenceApiSetup.setUp(binaryMessenger: self.headlessEngine!.binaryMessenger, api: nativeGeofenceMainApi)
+            self.log.debug("NativeGeofenceMainApi also initialized in background context.")
+            
+            // Register plugins after message handlers are set up
+            registrant(self.headlessEngine!)
+            self.log.debug("Flutter plugins registered.")
         }
-
-        NativeGeofenceBackgroundApiSetup.setUp(binaryMessenger: headlessEngine!.binaryMessenger, api: api)
-        log.debug("NativeGeofenceBackgroundApi setup called.")
-
-        // Also register the main NativeGeofenceApi in background context
-        let nativeGeofenceMainApi = NativeGeofenceApiImpl(registerPlugins: registrant, binaryMessenger: headlessEngine!.binaryMessenger)
-        NativeGeofenceApiSetup.setUp(binaryMessenger: headlessEngine!.binaryMessenger, api: nativeGeofenceMainApi)
-        log.debug("NativeGeofenceMainApi also initialized in background context.")
-        
-        // NOW start Flutter engine after all APIs are set up
-        headlessEngine!.run(withEntrypoint: callbackInfo.callbackName, libraryURI: callbackInfo.callbackLibraryPath)
-        
-        registrant(headlessEngine!)
-        log.debug("Flutter engine started and plugins registered.")
     }
     
     func getBackgroundApi() -> NativeGeofenceBackgroundApiImpl? {
