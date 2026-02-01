@@ -40,6 +40,8 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     
     // Background task management - track multiple tasks
     private var backgroundTasks: [UUID: UIBackgroundTaskIdentifier] = [:]
+    private var backgroundTaskStartTimes: [UUID: Date] = [:]
+    private var backgroundTaskEventParams: [UUID: GeofenceCallbackParams] = [:]
     private let backgroundTasksLock = NSLock()
     private let processingQueue = DispatchQueue(label: "com.native_geofence.processing", qos: .userInitiated)
     
@@ -47,6 +49,10 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     private let pendingEventsKey = "PendingGeofenceEvents"
     private let maxPendingEvents = 50
     private let maxRetries = 3
+    
+    // Cleanup constants
+    private let maxBackgroundTaskAge: TimeInterval = 30.0  // 30 seconds
+    private let maxConcurrentBackgroundTasks = 10  // iOS limiet is meestal ~10-20
 
     private override init() {
         // Use thread-safe getter
@@ -59,6 +65,33 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         
         // Try to process any previously failed events
         retryPendingEvents()
+        
+        // OPTIONEEL: Periodic cleanup timer - runs every 60 seconds als backup
+        // Dit is NIET de primaire strategie, maar een backup voor edge cases zoals lange periodes zonder events
+        /*
+        Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+            self?.cleanupStaleBackgroundTasks()
+        }
+        log.debug("Periodic background task cleanup timer started (backup)")
+        */
+        
+        // OPTIONEEL: App lifecycle cleanup - cleanup bij foreground/background events als backup
+        // Dit is NIET de primaire strategie, maar een extra cleanup moment
+        /*
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        log.debug("App lifecycle cleanup observers added (backup)")
+        */
     }
     
     // MARK: - Public Configuration
@@ -73,6 +106,29 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     
     deinit {
         log.error("🚨 LocationManagerDelegate is being deallocated! This should NEVER happen with singleton pattern!")
+        
+        // Cleanup all remaining background tasks and persist their events for retry
+        backgroundTasksLock.lock()
+        for (key, taskId) in backgroundTasks {
+            if taskId != .invalid {
+                log.warning("Cleaning up leaked background task \(key) during deinit")
+                
+                // Persist event for retry if we have the params
+                if let params = backgroundTaskEventParams[key] {
+                    log.info("Persisting event for retry due to deinit cleanup")
+                    // Release lock before calling persistFailedEvent to avoid deadlock
+                    backgroundTasksLock.unlock()
+                    persistFailedEvent(params)
+                    backgroundTasksLock.lock()
+                }
+                
+                UIApplication.shared.endBackgroundTask(taskId)
+            }
+        }
+        backgroundTasks.removeAll()
+        backgroundTaskStartTimes.removeAll()
+        backgroundTaskEventParams.removeAll()
+        backgroundTasksLock.unlock()
     }
 
     func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
@@ -118,32 +174,53 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
             return
         }
         
-        // 2. Start background task IMMEDIATELY to secure execution time
+        // 2. CLEANUP STALE TASKS FIRST (PRIMAIRE STRATEGIE)
+        // Dit gebeurt bij ELKE geofence event, dus geen timer nodig
+        cleanupStaleBackgroundTasks()
+        
+        // 3. Start background task IMMEDIATELY to secure execution time
         // Generate unique ID for this specific event processing
         let taskKey = UUID()
         let backgroundTaskId = UIApplication.shared.beginBackgroundTask(withName: "GeofenceEvent") { [weak self] in
-            self?.log.warning("Background task \(taskKey) expiring - cleaning up")
-            self?.endBackgroundTask(taskKey: taskKey)
+            self?.log.warning("Background task \(taskKey) expiring - cleaning up and persisting event")
+            self?.cleanupAndPersistStaleTask(taskKey: taskKey)
         }
         
-        // Store the task ID with its key
+        // 4. Store the task ID, timestamp, and event params
         backgroundTasksLock.lock()
         backgroundTasks[taskKey] = backgroundTaskId
+        backgroundTaskStartTimes[taskKey] = Date()
+        
+        // Create event params for potential retry
+        guard let geofence = NativeGeofencePersistence.getGeofence(id: activeGeofence.id) else {
+            log.error("Geofence definition for region \(activeGeofence.id) not found in persistence.")
+            backgroundTasksLock.unlock()
+            UIApplication.shared.endBackgroundTask(backgroundTaskId)
+            return
+        }
+        
+        let params = GeofenceCallbackParams(
+            geofences: [activeGeofence],
+            event: event,
+            location: nil,
+            callbackHandle: geofence.callbackHandle
+        )
+        backgroundTaskEventParams[taskKey] = params
         backgroundTasksLock.unlock()
         
         log.debug("Started background task \(taskKey) for geofence \(activeGeofence.id)")
         
-        // 3. Return QUICKLY from delegate - do heavy work ASYNC
+        // 5. Return QUICKLY from delegate - do heavy work ASYNC
         // This follows Apple's best practices: "return control to the location manager as quickly as possible"
         processingQueue.async { [weak self] in
-            self?.processGeofenceEventAsync(activeGeofence: activeGeofence, event: event, taskKey: taskKey)
+            self?.processGeofenceEventAsync(activeGeofence: activeGeofence, event: event, taskKey: taskKey, params: params)
         }
     }
     
     // MARK: - Async Processing (Apple Best practice)
     
     /// Process geofence event asynchronously to avoid blocking CLLocationManager delegate
-    private func processGeofenceEventAsync(activeGeofence: ActiveGeofence, event: GeofenceEvent, taskKey: UUID) {
+    private func processGeofenceEventAsync(activeGeofence: ActiveGeofence, event: GeofenceEvent, taskKey: UUID, params: GeofenceCallbackParams) {
         // Now we can do heavy work without blocking the delegate method
         guard let geofence = NativeGeofencePersistence.getGeofence(id: activeGeofence.id) else {
             log.error("Geofence definition for region \(activeGeofence.id) not found in persistence.")
@@ -158,7 +235,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
             callbackHandle: geofence.callbackHandle
         )
 
-        // If the engine is not running, start it and then send the event
+        // If engine is not running, start it and then send the event
         if EngineManager.shared.getBackgroundApi() == nil {
             log.warning("Background API not available. The engine may have been killed. Attempting to restart...")
             guard let registrant = flutterPluginRegistrantCallback else {
@@ -207,14 +284,81 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         
         guard let taskId = backgroundTasks[taskKey] else {
             log.warning("Attempted to end background task \(taskKey) but it was not found")
+            // Also clean up timestamp and event params if they exist
+            backgroundTaskStartTimes.removeValue(forKey: taskKey)
+            backgroundTaskEventParams.removeValue(forKey: taskKey)
             return
         }
         
         if taskId != .invalid {
             UIApplication.shared.endBackgroundTask(taskId)
             backgroundTasks.removeValue(forKey: taskKey)
+            backgroundTaskStartTimes.removeValue(forKey: taskKey)
+            backgroundTaskEventParams.removeValue(forKey: taskKey)
             log.debug("Background task \(taskKey) ended successfully")
         }
+    }
+    
+    /// Cleanup stale background tasks that have been running too long
+    /// Called before every new geofence event (PRIMAIRE STRATEGIE)
+    /// Also called by expiry handler when iOS is about to terminate a task
+    private func cleanupStaleBackgroundTasks() {
+        backgroundTasksLock.lock()
+        defer { backgroundTasksLock.unlock() }
+        
+        let now = Date()
+        let staleKeys = backgroundTaskStartTimes.filter { 
+            now.timeIntervalSince($0.value) > maxBackgroundTaskAge 
+        }.map { $0.key }
+        
+        for key in staleKeys {
+            cleanupAndPersistStaleTask(taskKey: key)
+        }
+        
+        // Also check for excessive number of tasks (iOS limit protection)
+        if backgroundTasks.count > maxConcurrentBackgroundTasks {
+            let excessCount = backgroundTasks.count - maxConcurrentBackgroundTasks
+            log.error("Too many background tasks (\(backgroundTasks.count)). Cleaning up \(excessCount) oldest tasks.")
+            
+            let sortedKeys = backgroundTaskStartTimes.sorted { $0.value < $1.value }.map { $0.key }
+            for key in sortedKeys.prefix(excessCount) {
+                cleanupAndPersistStaleTask(taskKey: key)
+            }
+        }
+    }
+    
+    /// Cleanup a specific stale task and persist its event for retry
+    /// This ensures that events are not lost when tasks crash or hang
+    private func cleanupAndPersistStaleTask(taskKey: UUID) {
+        backgroundTasksLock.lock()
+        defer { backgroundTasksLock.unlock() }
+        
+        guard let taskId = backgroundTasks[taskKey], taskId != .invalid else {
+            // Task already cleaned up, just remove leftover data
+            backgroundTasks.removeValue(forKey: taskKey)
+            backgroundTaskStartTimes.removeValue(forKey: taskKey)
+            backgroundTaskEventParams.removeValue(forKey: taskKey)
+            return
+        }
+        
+        let now = Date()
+        let age = backgroundTaskStartTimes[taskKey].map { now.timeIntervalSince($0) } ?? 0
+        
+        log.warning("Cleaning up stale background task \(taskKey) (age: \(String(format: "%.1f", age))s)")
+        
+        // Persist the event for retry if we have the params
+        if let params = backgroundTaskEventParams[taskKey] {
+            log.info("Persisting event for retry due to stale background task \(taskKey)")
+            persistFailedEvent(params)
+        }
+        
+        // End the background task
+        UIApplication.shared.endBackgroundTask(taskId)
+        
+        // Remove all tracking data
+        backgroundTasks.removeValue(forKey: taskKey)
+        backgroundTaskStartTimes.removeValue(forKey: taskKey)
+        backgroundTaskEventParams.removeValue(forKey: taskKey)
     }
 
     func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: any Error) {

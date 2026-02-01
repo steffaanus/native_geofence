@@ -66,17 +66,40 @@ class EngineManager {
         headlessEngine = FlutterEngine(name: Constants.HEADLESS_FLUTTER_ENGINE_NAME, project: nil, allowHeadlessExecution: true)
         log.debug("A new headless Flutter engine has been created.")
         
+        // CRITICAL: Final check to detect and clean up duplicate engines
+        // This provides additional safety in case a race condition still occurs
+        lock.lock()
+        let engineInstance = headlessEngine
+        lock.unlock()
+        
         guard let callbackDispatcherHandle = NativeGeofencePersistence.getCallbackDispatcherHandle() else {
             log.error("Callback dispatcher not found in UserDefaults.")
+            lock.lock()
             isStarting = false
+            lock.unlock()
             return
         }
         
         guard let callbackInfo = FlutterCallbackCache.lookupCallbackInformation(callbackDispatcherHandle) else {
             log.error("Callback dispatcher not found.")
+            lock.lock()
+            isStarting = false
+            lock.unlock()
+            return
+        }
+        
+        // CRITICAL: Check if another thread created an engine (duplicate detection)
+        lock.lock()
+        if headlessEngine != engineInstance {
+            // Another thread created an engine! Clean up this one.
+            log.error("⚠️ Race condition detected - another thread created a different engine instance. Cleaning up duplicate.")
+            headlessEngine?.destroyContext()
+            headlessEngine = engineInstance  // Use the engine created by the first thread
+            lock.unlock()
             isStarting = false
             return
         }
+        lock.unlock()
         
         // CRITICAL FIX: Start Flutter engine BEFORE setting up message handlers
         // This is required by Flutter - message handlers cannot be set before engine runs
