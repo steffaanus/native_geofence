@@ -25,6 +25,9 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
     private var isClosed: Bool = false
     private var nativeGeoFenceTriggerApi: NativeGeofenceTriggerApi? = nil
     
+    // Flag to ensure sequential queue processing (prevents race condition)
+    private var isProcessingQueue: Bool = false
+    
     // Callback to notify when the background API is ready to process events.
     var onInitialized: (() -> Void)?
     
@@ -61,7 +64,8 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
             // Note: We don't call completion here - it will be called when event is actually processed
             return
         }
-        processQueueWithCompletion(completion)
+        // Start queue processing (will only begin if not already processing)
+        startQueueProcessing()
     }
     
     func triggerApiInitialized() throws {
@@ -80,30 +84,65 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
             log.debug("Waiting for geofence event...")
             return
         }
-        processQueue()
+        // Start queue processing (will only begin if not already processing)
+        startQueueProcessing()
     }
     
     // MARK: - Queue Processing
     
-    private func processQueue() {
-        processQueueWithCompletion(nil)
+    /// Starts queue processing if not already processing
+    /// This ensures events are processed sequentially, preventing race conditions
+    private func startQueueProcessing() {
+        objc_sync_enter(self)
+        let shouldStart = !isProcessingQueue && !eventQueue.isEmpty
+        if shouldStart {
+            isProcessingQueue = true
+        }
+        objc_sync_exit(self)
+        
+        if shouldStart {
+            log.debug("Starting sequential queue processing")
+            processNextEvent()
+        }
     }
     
-    private func processQueueWithCompletion(_ completion: ((Result<Void, Error>) -> Void)?) {
+    /// Processes the next event in the queue sequentially
+    /// Called recursively after each event completes
+    private func processNextEvent() {
         objc_sync_enter(self)
-        defer { objc_sync_exit(self) }
         
         if isClosed {
-            log.error("NativeGeofenceBackgroundApi already closed, ignoring additional events.")
-            completion?(.failure(NSError(domain: "NativeGeofence", code: -1, userInfo: [NSLocalizedDescriptionKey: "API closed"])))
+            log.error("NativeGeofenceBackgroundApi already closed, stopping queue processing.")
+            isProcessingQueue = false
+            objc_sync_exit(self)
             return
         }
         
-        if !eventQueue.isEmpty {
-            let params = eventQueue.removeFirst()
-            log.debug("Queue dispatch: sending geofence trigger event for IDs=[\(NativeGeofenceBackgroundApiImpl.geofenceIds(params))].")
-            callGeofenceTriggerApi(params: params, completion: completion)
+        guard !eventQueue.isEmpty else {
+            // Queue is empty, stop processing
+            isProcessingQueue = false
+            objc_sync_exit(self)
+            log.debug("Queue processing complete - no more events")
+            return
         }
+        
+        let params = eventQueue.removeFirst()
+        objc_sync_exit(self)
+        
+        log.debug("Queue dispatch: sending geofence trigger event for IDs=[\(NativeGeofenceBackgroundApiImpl.geofenceIds(params))].")
+        callGeofenceTriggerApi(params: params, completion: nil)
+    }
+    
+    // Legacy method for backward compatibility - now delegates to startQueueProcessing
+    private func processQueue() {
+        startQueueProcessing()
+    }
+    
+    // Legacy method for backward compatibility - now delegates to startQueueProcessing
+    private func processQueueWithCompletion(_ completion: ((Result<Void, Error>) -> Void)?) {
+        // Note: completion parameter is no longer used in sequential processing
+        // Events are processed one at a time, and completions are handled via callback tracking
+        startQueueProcessing()
     }
     
     // MARK: - Flutter Callback
@@ -207,9 +246,9 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         // Call completion with failure
         completion?(.failure(NSError(domain: "Timeout", code: -4, userInfo: [NSLocalizedDescriptionKey: "Callback timeout after \(duration)s"])))
         
-        // Force queue continuation
-        log.info("Forcing queue continuation after timeout")
-        processQueue()
+        // Continue processing next event sequentially
+        log.info("Continuing to next event in queue after timeout")
+        processNextEvent()
     }
     
     private func handleCallbackCompletion(
@@ -251,8 +290,8 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
             tracker.completion?(result)
         }
         
-        // Process next item in queue
-        processQueue()
+        // Continue processing next event sequentially
+        processNextEvent()
     }
     
     // MARK: - Circuit Breaker
