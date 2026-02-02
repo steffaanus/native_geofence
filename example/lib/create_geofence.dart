@@ -16,7 +16,7 @@ class CreateGeofenceState extends State<CreateGeofence> {
   static final Location _timesSquare =
       Location(latitude: 53.164677890945015, longitude: 5.445930351661604);
 
-  List<String> activeGeofences = [];
+  List<ActiveGeofence> activeGeofences = [];
   late Geofence data;
 
   @override
@@ -46,7 +46,19 @@ class CreateGeofenceState extends State<CreateGeofence> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('Active Geofences: $activeGeofences'),
+        Text('Active Geofences:', style: Theme.of(context).textTheme.titleMedium),
+        ...activeGeofences.map((g) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('• ID: ${g.id}', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('  Radius: ${g.radiusMeters.toStringAsFixed(0)}m'),
+              Text('  Status: ${g.status.name}'),
+              Text('  Location: ${g.location.latitude.toStringAsFixed(4)}, ${g.location.longitude.toStringAsFixed(4)}'),
+            ],
+          ),
+        )),
         SizedBox(height: 40),
         Form(
           child: Column(
@@ -132,9 +144,25 @@ class CreateGeofenceState extends State<CreateGeofence> {
                     );
                     return;
                   }
+                  // Create the main geofence
                   await NativeGeofenceManager.instance
                       .createGeofence(data, geofenceTriggered);
                   debugPrint('Geofence created: ${data.id}');
+
+                  // Create the outer geofence with double the radius
+                  final outerGeofence = Geofence(
+                    id: '${data.id}_outer',
+                    location: data.location,
+                    radiusMeters: data.radiusMeters * 2,
+                    triggers: data.triggers,
+                    iosSettings: data.iosSettings,
+                    androidSettings: data.androidSettings,
+                    callbackHandle: data.callbackHandle,
+                  );
+                  await NativeGeofenceManager.instance
+                      .createGeofence(outerGeofence, geofenceTriggered);
+                  debugPrint('Outer geofence created: ${outerGeofence.id}');
+
                   await _updateRegisteredGeofences();
                   await Future.delayed(const Duration(seconds: 1));
                   await _updateRegisteredGeofences();
@@ -144,8 +172,23 @@ class CreateGeofenceState extends State<CreateGeofence> {
               SizedBox(height: 22),
               ElevatedButton(
                 onPressed: () async {
+                  // Remove the main geofence
                   await NativeGeofenceManager.instance.removeGeofence(data);
                   debugPrint('Geofence removed: ${data.id}');
+
+                  // Remove the outer geofence
+                  final outerGeofence = Geofence(
+                    id: '${data.id}_outer',
+                    location: data.location,
+                    radiusMeters: data.radiusMeters * 2,
+                    triggers: data.triggers,
+                    iosSettings: data.iosSettings,
+                    androidSettings: data.androidSettings,
+                    callbackHandle: data.callbackHandle,
+                  );
+                  await NativeGeofenceManager.instance.removeGeofence(outerGeofence);
+                  debugPrint('Outer geofence removed: ${outerGeofence.id}');
+
                   await _updateRegisteredGeofences();
                   await Future.delayed(const Duration(seconds: 1));
                   await _updateRegisteredGeofences();
@@ -160,12 +203,12 @@ class CreateGeofenceState extends State<CreateGeofence> {
   }
 
   Future<void> _updateRegisteredGeofences() async {
-    final List<String> geofences =
-        await NativeGeofenceManager.instance.getRegisteredGeofenceIds();
+    final List<ActiveGeofence> geofences =
+        await NativeGeofenceManager.instance.getRegisteredGeofences();
     setState(() {
       activeGeofences = geofences;
     });
-    debugPrint('Active geofences updated.');
+    debugPrint('Active geofences updated: ${geofences.map((g) => '${g.id} (${g.radiusMeters}m)').join(', ')}');
   }
 }
 

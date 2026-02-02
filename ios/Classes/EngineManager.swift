@@ -120,6 +120,7 @@ class EngineManager {
             return
         }
         
+        // Run the engine - this executes the Dart entrypoint synchronously
         engine.run(
             withEntrypoint: callbackInfo.callbackName,
             libraryURI: callbackInfo.callbackLibraryPath
@@ -127,8 +128,9 @@ class EngineManager {
         
         log.debug("Flutter engine run started")
         
-        // Wait for engine initialization before setting up APIs
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        // Setup APIs AFTER engine.run() - binary messenger is only valid after run
+        // Use minimal delay to ensure engine is ready
+        DispatchQueue.main.async { [weak self] in
             self?.finalizeEngineSetup(engine: engine, registrant: registrant)
         }
     }
