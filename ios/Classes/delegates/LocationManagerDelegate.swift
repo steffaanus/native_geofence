@@ -261,7 +261,7 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         defer { backgroundTasksLock.unlock() }
         
         let now = Date()
-        let staleEntries = backgroundTasks.filter {
+        let staleEntries = self.backgroundTasks.filter {
             now.timeIntervalSince($0.value.startTime) > maxBackgroundTaskAge
         }
         
@@ -270,11 +270,11 @@ class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
         }
         
         // Also check for excessive number of tasks (iOS limit protection)
-        if backgroundTasks.count > maxConcurrentBackgroundTasks {
-            let excessCount = backgroundTasks.count - maxConcurrentBackgroundTasks
-            log.error("Too many background tasks (\(backgroundTasks.count)). Cleaning up \(excessCount) oldest tasks.")
+        if self.backgroundTasks.count > maxConcurrentBackgroundTasks {
+            let excessCount = self.backgroundTasks.count - maxConcurrentBackgroundTasks
+            log.error("Too many background tasks (\(self.backgroundTasks.count)). Cleaning up \(excessCount) oldest tasks.")
             
-            let sortedEntries = backgroundTasks.sorted { $0.value.startTime < $1.value.startTime }
+            let sortedEntries = self.backgroundTasks.sorted { $0.value.startTime < $1.value.startTime }
             for (key, _) in sortedEntries.prefix(excessCount) {
                 cleanupAndPersistStaleTaskInternal(taskKey: key)
             }

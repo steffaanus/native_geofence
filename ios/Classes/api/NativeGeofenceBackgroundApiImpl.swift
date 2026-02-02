@@ -160,10 +160,12 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         )
         
         // Call Flutter API
-        api.geofenceTriggered(params: params, completion: { [weak self] result in
+        api.geofenceTriggered(params: params, completion: { [weak self] (result: Result<Void, PigeonError>) in
+            // Convert Result<Void, PigeonError> to Result<Void, Error>
+            let mappedResult: Result<Void, Error> = result.mapError { $0 as Error }
             self?.handleCallbackCompletion(
                 callbackId: callbackId,
-                result: result,
+                result: mappedResult,
                 geofenceIds: geofenceIds,
                 eventType: eventType
             )
@@ -196,7 +198,7 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
             - Geofence IDs: \(geofenceIds)
             - Event Type: \(eventType)
             - Duration: \(String(format: "%.1f", duration))s
-            - Timeout Limit: \(callbackTimeout)s
+            - Timeout Limit: \(self.callbackTimeout)s
             """)
         
         // Record timeout for circuit breaker
@@ -283,8 +285,8 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
             circuitBreakerOpenTime = Date()
             log.error("""
                 🚨 CIRCUIT BREAKER OPENED!
-                - Consecutive timeouts: \(consecutiveTimeouts)
-                - Cooldown period: \(circuitBreakerCooldown)s
+                - Consecutive timeouts: \(self.consecutiveTimeouts)
+                - Cooldown period: \(self.circuitBreakerCooldown)s
                 - Events will be skipped until cooldown ends
                 """)
         }
@@ -316,7 +318,7 @@ extension NativeGeofenceBackgroundApiImpl {
     func setCallbackTimeout(_ timeout: TimeInterval) {
         // This is now read-only from Constants
         // Kept for API compatibility
-        log.info("Callback timeout is fixed at \(callbackTimeout)s (configured in Constants)")
+        log.info("Callback timeout is fixed at \(self.callbackTimeout)s (configured in Constants)")
     }
     
     /// Get current callback timeout
