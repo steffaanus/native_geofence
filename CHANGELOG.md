@@ -1,3 +1,34 @@
+## 2.4.2
+
+**Critical iOS Stability & Reliability Improvements**
+
+This release addresses three critical issues that could cause geofence events to be lost on iOS, particularly when the app is in the background or terminated.
+
+### Critical Fixes (iOS)
+*   **Fix (Race Condition):** Fixed a race condition in [`EngineManager`](ios/Classes/EngineManager.swift:17) where concurrent calls to `startEngine()` could lead to multiple engine instances being created or completions not being called. The implementation now uses a proper state machine with thread-safe queuing.
+*   **Fix (Memory Leak):** Fixed background task memory leaks in [`LocationManagerDelegate`](ios/Classes/delegates/LocationManagerDelegate.swift:18) where tasks could accumulate and never be cleaned up. Added automatic cleanup of stale tasks (>30s) and protection against exceeding iOS background task limits.
+*   **Fix (Callback Timeout):** Implemented comprehensive callback timeout mechanism in [`NativeGeofenceBackgroundApiImpl`](ios/Classes/api/NativeGeofenceBackgroundApiImpl.swift:18) to prevent infinite hangs when Flutter callbacks fail to complete. Includes circuit breaker pattern to protect against cascading failures.
+
+### Improvements (iOS)
+*   **Improvement:** Added event persistence for failed geofence events. Events that cannot be processed due to engine failures are now saved to disk and retried on next app launch.
+*   **Improvement:** Enhanced background task management with consolidated tracking, automatic cleanup, and proper error handling.
+*   **Improvement:** Added circuit breaker pattern to prevent overwhelming the system when callbacks consistently timeout.
+*   **Improvement:** Better logging with detailed context for debugging timeout and retry scenarios.
+
+### Technical Details
+*   Callback timeout is set to 28 seconds (matching Dart side 25s timeout with buffer)
+*   Circuit breaker opens after 10 consecutive timeouts, with 5-minute cooldown
+*   Maximum 50 pending events stored for retry
+*   Maximum 3 retry attempts with exponential backoff (2s, 4s, 8s)
+
+### Breaking Changes
+*   **None** - All changes are internal implementation improvements.
+
+### Migration Notes
+*   **No code changes required** - Existing apps automatically benefit from improved reliability.
+
+---
+
 ## 2.4.1
 
 **Stability & Simplification**
