@@ -1,170 +1,185 @@
 import Flutter
 import OSLog
 
+// MARK: - Engine State
+
+/// Represents the current state of the Flutter engine
+private enum EngineState {
+    case stopped
+    case starting(completions: [() -> Void])
+    case running(engine: FlutterEngine, api: NativeGeofenceBackgroundApiImpl)
+}
+
+// MARK: - EngineManager
+
+/// Manages the lifecycle of the headless Flutter engine for background geofence processing.
+/// This class uses a state machine pattern to ensure thread-safe engine management.
 class EngineManager {
     static let shared = EngineManager()
     
     private let log = Logger(subsystem: Constants.PACKAGE_NAME, category: "EngineManager")
     private let lock = NSLock()
     
-    private var headlessEngine: FlutterEngine?
-    private var backgroundApi: NativeGeofenceBackgroundApiImpl?
-    private var onEngineStarted: (() -> Void)?
-    private var isStarting = false
-    private var pendingCompletions: [() -> Void] = []
-
+    private var state: EngineState = .stopped
+    
     private init() {}
     
-    func startEngine(withPluginRegistrant registrant: @escaping FlutterPluginRegistrantCallback, completion: (() -> Void)?) {
-        // Always ensure we're on main thread for Flutter operations
+    // MARK: - Public API
+    
+    /// Starts the Flutter engine if not already running.
+    /// Thread-safe and handles concurrent calls by queuing completions.
+    /// - Parameters:
+    ///   - registrant: Callback to register plugins with the engine
+    ///   - completion: Called when engine is ready (may be queued if starting)
+    func startEngine(withPluginRegistrant registrant: @escaping FlutterPluginRegistrantCallback, 
+                     completion: (() -> Void)?) {
+        // Ensure main thread for Flutter operations
         guard Thread.isMainThread else {
-            log.debug("startEngine called from background thread - dispatching to main thread")
+            log.debug("startEngine called from background thread - dispatching to main")
             DispatchQueue.main.async { [weak self] in
                 self?.startEngine(withPluginRegistrant: registrant, completion: completion)
             }
             return
         }
         
-        // Acquire lock BEFORE any checks to ensure atomicity
         lock.lock()
         
-        // Check if engine already exists AND backgroundApi is ready
-        if headlessEngine != nil && backgroundApi != nil {
-            lock.unlock()  // Release lock before calling completion
-            log.debug("Engine and background API already ready.")
+        switch state {
+        case .running:
+            // Engine already running - execute completion immediately
+            lock.unlock()
+            log.debug("Engine already running, executing completion immediately")
             completion?()
-            return
-        }
-        
-        // Check if engine exists but backgroundApi is still initializing
-        if headlessEngine != nil && backgroundApi == nil {
-            log.debug("Engine exists but background API not ready yet - queuing completion")
+            
+        case .starting(var completions):
+            // Engine starting - queue completion
             if let completion = completion {
-                pendingCompletions.append(completion)
+                completions.append(completion)
             }
-            lock.unlock()  // Release lock
-            return
-        }
-        
-        // Check if engine startup is in progress
-        if isStarting {
-            log.debug("Engine startup already in progress - queuing completion")
+            state = .starting(completions: completions)
+            lock.unlock()
+            log.debug("Engine starting - completion queued (total: \(completions.count))")
+            
+        case .stopped:
+            // Start engine - queue completion and begin startup
+            var completions: [() -> Void] = []
             if let completion = completion {
-                pendingCompletions.append(completion)
+                completions.append(completion)
             }
-            lock.unlock()  // Release lock
-            return
-        }
-        
-        // CRITICAL: Mark that we're starting the engine WHILE HOLDING LOCK
-        // This prevents race conditions where multiple threads could create multiple engines
-        isStarting = true
-        lock.unlock()  // NOW we can release the lock
-        
-        log.debug("Starting new Flutter engine...")
-        
-        headlessEngine = FlutterEngine(name: Constants.HEADLESS_FLUTTER_ENGINE_NAME, project: nil, allowHeadlessExecution: true)
-        log.debug("A new headless Flutter engine has been created.")
-        
-        // CRITICAL: Final check to detect and clean up duplicate engines
-        // This provides additional safety in case a race condition still occurs
-        lock.lock()
-        let engineInstance = headlessEngine
-        lock.unlock()
-        
-        guard let callbackDispatcherHandle = NativeGeofencePersistence.getCallbackDispatcherHandle() else {
-            log.error("Callback dispatcher not found in UserDefaults.")
-            lock.lock()
-            isStarting = false
+            state = .starting(completions: completions)
             lock.unlock()
-            return
-        }
-        
-        guard let callbackInfo = FlutterCallbackCache.lookupCallbackInformation(callbackDispatcherHandle) else {
-            log.error("Callback dispatcher not found.")
-            lock.lock()
-            isStarting = false
-            lock.unlock()
-            return
-        }
-        
-        // CRITICAL: Check if another thread created an engine (duplicate detection)
-        lock.lock()
-        if headlessEngine != engineInstance {
-            // Another thread created an engine! Clean up this one.
-            log.error("⚠️ Race condition detected - another thread created a different engine instance. Cleaning up duplicate.")
-            headlessEngine?.destroyContext()
-            headlessEngine = engineInstance  // Use the engine created by the first thread
-            lock.unlock()
-            isStarting = false
-            return
-        }
-        lock.unlock()
-        
-        // CRITICAL FIX: Start Flutter engine BEFORE setting up message handlers
-        // This is required by Flutter - message handlers cannot be set before engine runs
-        headlessEngine!.run(withEntrypoint: callbackInfo.callbackName, libraryURI: callbackInfo.callbackLibraryPath)
-        log.debug("Flutter engine started.")
-        
-        // CRITICAL: Wait a short time for Flutter engine to initialize before setting up message handlers
-        // This prevents race condition where Flutter calls triggerApiInitialized() before handlers are ready
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self = self else { return }
             
-            // Now set up the message handlers after engine is running
-            let api = NativeGeofenceBackgroundApiImpl(binaryMessenger: self.headlessEngine!.binaryMessenger)
-            
-            // Set onInitialized callback BEFORE calling setUp()
-            api.onInitialized = { [weak self] in
-                guard let self = self else { return }
-                
-                self.lock.lock()
-                self.backgroundApi = api
-                self.isStarting = false
-                self.log.debug("NativeGeofenceBackgroundApi is ready.")
-                
-                // Collect all pending completions
-                let allCompletions = self.pendingCompletions + (completion != nil ? [completion!] : [])
-                self.pendingCompletions.removeAll()
-                
-                self.log.debug("Executing \(allCompletions.count) pending completion handler(s)")
-                self.lock.unlock()
-
-                // Execute all completion handlers now that the background API is fully initialized
-                for completionHandler in allCompletions {
-                    completionHandler()
-                }
-            }
-
-            NativeGeofenceBackgroundApiSetup.setUp(binaryMessenger: self.headlessEngine!.binaryMessenger, api: api)
-            self.log.debug("NativeGeofenceBackgroundApi setup called.")
-
-            // Also register the main NativeGeofenceApi in background context
-            let nativeGeofenceMainApi = NativeGeofenceApiImpl(registerPlugins: registrant, binaryMessenger: self.headlessEngine!.binaryMessenger)
-            NativeGeofenceApiSetup.setUp(binaryMessenger: self.headlessEngine!.binaryMessenger, api: nativeGeofenceMainApi)
-            self.log.debug("NativeGeofenceMainApi also initialized in background context.")
-            
-            // Register plugins after message handlers are set up
-            registrant(self.headlessEngine!)
-            self.log.debug("Flutter plugins registered.")
+            log.debug("Starting new Flutter engine...")
+            createEngine(registrant: registrant)
         }
     }
     
+    /// Returns the background API if engine is running
     func getBackgroundApi() -> NativeGeofenceBackgroundApiImpl? {
         lock.lock()
         defer { lock.unlock() }
-        return backgroundApi
+        
+        if case .running(_, let api) = state {
+            return api
+        }
+        return nil
     }
     
+    /// Stops the engine and cleans up resources
     func stopEngine() {
         lock.lock()
         defer { lock.unlock() }
         
-        headlessEngine?.destroyContext()
-        headlessEngine = nil
-        backgroundApi = nil
-        isStarting = false
-        pendingCompletions.removeAll()
-        log.debug("Headless engine stopped and cleaned up.")
+        if case .running(let engine, _) = state {
+            engine.destroyContext()
+            log.debug("Engine destroyed")
+        }
+        
+        state = .stopped
+        log.debug("Engine state reset to stopped")
+    }
+    
+    // MARK: - Private Methods
+    
+    private func createEngine(registrant: @escaping FlutterPluginRegistrantCallback) {
+        let engine = FlutterEngine(
+            name: Constants.HEADLESS_FLUTTER_ENGINE_NAME,
+            project: nil,
+            allowHeadlessExecution: true
+        )
+        
+        log.debug("Flutter engine instance created")
+        
+        guard let handle = NativeGeofencePersistence.getCallbackDispatcherHandle(),
+              let callbackInfo = FlutterCallbackCache.lookupCallbackInformation(handle) else {
+            log.error("Callback dispatcher not found - cannot start engine")
+            
+            lock.lock()
+            state = .stopped
+            lock.unlock()
+            return
+        }
+        
+        engine.run(
+            withEntrypoint: callbackInfo.callbackName,
+            libraryURI: callbackInfo.callbackLibraryPath
+        )
+        
+        log.debug("Flutter engine run started")
+        
+        // Wait for engine initialization before setting up APIs
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.finalizeEngineSetup(engine: engine, registrant: registrant)
+        }
+    }
+    
+    private func finalizeEngineSetup(engine: FlutterEngine,
+                                     registrant: @escaping FlutterPluginRegistrantCallback) {
+        let api = NativeGeofenceBackgroundApiImpl(binaryMessenger: engine.binaryMessenger)
+        
+        api.onInitialized = { [weak self] in
+            self?.handleEngineInitialized(engine: engine, api: api)
+        }
+        
+        // Setup APIs
+        NativeGeofenceBackgroundApiSetup.setUp(
+            binaryMessenger: engine.binaryMessenger,
+            api: api
+        )
+        
+        let mainApi = NativeGeofenceApiImpl(
+            registerPlugins: registrant,
+            binaryMessenger: engine.binaryMessenger
+        )
+        NativeGeofenceApiSetup.setUp(
+            binaryMessenger: engine.binaryMessenger,
+            api: mainApi
+        )
+        
+        // Register plugins
+        registrant(engine)
+        
+        log.debug("Engine setup finalized, waiting for API initialization...")
+    }
+    
+    private func handleEngineInitialized(engine: FlutterEngine,
+                                         api: NativeGeofenceBackgroundApiImpl) {
+        lock.lock()
+        
+        guard case .starting(let completions) = state else {
+            lock.unlock()
+            log.warning("Engine initialized but state changed - ignoring")
+            return
+        }
+        
+        state = .running(engine: engine, api: api)
+        lock.unlock()
+        
+        log.debug("Engine fully initialized, executing \(completions.count) queued completions")
+        
+        // Execute all queued completions
+        for completion in completions {
+            completion()
+        }
     }
 }

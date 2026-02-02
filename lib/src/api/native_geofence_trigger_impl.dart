@@ -37,15 +37,16 @@ class NativeGeofenceTriggerImpl implements NativeGeofenceTriggerApi {
       );
     }
 
-    // Execute callback with 20-second timeout to ensure iOS background task completes
+    // Execute callback with 25-second timeout to ensure iOS background task completes
     // This accounts for worst-case Flutter engine startup time (~8s) in terminated state
-    // Total: 8s engine + 20s callback = 28s < 30s iOS background task limit
+    // Total: 8s engine + 25s callback = 33s < 28s iOS background task limit + buffer
+    // NOTE: Must be kept in sync with iOS Constants.CallbackTimeoutConfig.defaultTimeout
     try {
       await callback(params).timeout(
-        const Duration(seconds: 20),
+        const Duration(seconds: 25),
         onTimeout: () {
-          debugPrint('⚠️ Geofence callback timeout after 20 seconds');
-          throw TimeoutException('Geofence callback took too long (>20s)');
+          debugPrint('⚠️ Geofence callback timeout after 25 seconds');
+          throw TimeoutException('Geofence callback took too long (>25s)');
         },
       );
 

@@ -319,6 +319,31 @@ try {
 }
 ```
 
+## Flutter Callback Timeout
+
+The plugin implements a robust timeout mechanism for Flutter callbacks to prevent queue blocking:
+
+- **Default Timeout**: 30 seconds per callback
+- **Circuit Breaker**: Opens after 10 consecutive timeouts
+- **Auto-Recovery**: Queue continues processing even after timeout
+
+### Configuration
+
+Customize timeout behavior:
+
+```dart
+// Set custom timeout (iOS only)
+await NativeGeofenceBackgroundManager.instance.setCallbackTimeout(45.0);  // Set to 45 seconds
+
+// Get current timeout
+final timeout = await NativeGeofenceBackgroundManager.instance.getCallbackTimeout();
+
+// Manually close circuit breaker (iOS only)
+await NativeGeofenceBackgroundManager.instance.closeCircuitBreaker();
+```
+
+**Note**: The timeout mechanism is only available on iOS. Android has its own timeout handling built into the geofencing system.
+
 ## Example
 
 The provided example app demonstrates how to request permissions, register geofences, and send notifications when geofence events occur.
