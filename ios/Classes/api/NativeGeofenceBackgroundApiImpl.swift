@@ -2,6 +2,15 @@ import CoreLocation
 import Flutter
 import OSLog
 
+// MARK: - Queued Event
+
+/// Stores an event in the queue along with its completion handler.
+/// This ensures the original caller is notified when the event is processed.
+private struct QueuedEvent {
+    let params: GeofenceCallbackParams
+    let completion: ((Result<Void, Error>) -> Void)?
+}
+
 // MARK: - Callback Tracker
 
 /// Tracks the state of an active callback
@@ -20,7 +29,7 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
     
     private let binaryMessenger: FlutterBinaryMessenger
     
-    private var eventQueue: [GeofenceCallbackParams] = .init()
+    private var eventQueue: [QueuedEvent] = .init()
     private let maxQueueSize = 100
     private var isClosed: Bool = false
     private var nativeGeoFenceTriggerApi: NativeGeofenceTriggerApi? = nil
@@ -53,10 +62,17 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
         objc_sync_enter(self)
         if eventQueue.count >= maxQueueSize {
             log.warning("Queue full. Dropping oldest event.")
-            eventQueue.removeFirst()
+            let droppedEvent = eventQueue.removeFirst()
+            // Notify the original caller that their event was dropped
+            droppedEvent.completion?(.failure(NSError(
+                domain: "NativeGeofence",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Event dropped - queue full"]
+            )))
         }
 
-        eventQueue.append(params)
+        // Store event WITH completion handler so it can be called when processed
+        eventQueue.append(QueuedEvent(params: params, completion: completion))
         objc_sync_exit(self)
 
         guard let nativeGeoFenceTriggerApi else {
@@ -126,11 +142,12 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
             return
         }
         
-        let params = eventQueue.removeFirst()
+        let queuedEvent = eventQueue.removeFirst()
         objc_sync_exit(self)
         
-        log.debug("Queue dispatch: sending geofence trigger event for IDs=[\(NativeGeofenceBackgroundApiImpl.geofenceIds(params))].")
-        callGeofenceTriggerApi(params: params, completion: nil)
+        log.debug("Queue dispatch: sending geofence trigger event for IDs=[\(NativeGeofenceBackgroundApiImpl.geofenceIds(queuedEvent.params))].")
+        // Pass the stored completion handler to the API call
+        callGeofenceTriggerApi(params: queuedEvent.params, completion: queuedEvent.completion)
     }
     
     // Legacy method for backward compatibility - now delegates to startQueueProcessing
@@ -346,6 +363,11 @@ class NativeGeofenceBackgroundApiImpl: NativeGeofenceBackgroundApi {
     private static func geofenceIds(_ params: GeofenceCallbackParams) -> String {
         let ids: [String] = params.geofences.compactMap { $0?.id }
         return ids.joined(separator: ",")
+    }
+    
+    /// Helper to extract geofence IDs from a QueuedEvent
+    private static func geofenceIds(_ queuedEvent: QueuedEvent) -> String {
+        return geofenceIds(queuedEvent.params)
     }
 }
 
