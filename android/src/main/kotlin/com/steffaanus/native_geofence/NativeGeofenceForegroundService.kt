@@ -42,6 +42,16 @@ class NativeGeofenceForegroundService : Service() {
         
         // Maximum number of retries for Flutter engine startup failures
         private const val MAX_ENGINE_START_RETRIES = 3
+        
+        // Timeout for waiting on pending callbacks before forcing cleanup
+        private const val CALLBACK_TIMEOUT_MS = 30_000L // 30 seconds
+        
+        // Enum for timeout action to avoid nested lock acquisition
+        private enum class TimeoutAction {
+            NONE,           // No action needed (callback ID changed)
+            DESTROY_ENGINE, // Destroy engine and stop service
+            FAIL_EVENT      // Fail the current event and continue
+        }
     }
 
     // Queue for sequential event processing
@@ -65,13 +75,24 @@ class NativeGeofenceForegroundService : Service() {
     // Flutter loader
     private val flutterLoader = FlutterInjector.instance().flutterLoader()
     
-    // FIX 3: Track engine start retry attempts
+    // Track engine start retry attempts
     private var engineStartRetries = 0
     
-    // FIX 4: Service state protection to prevent race conditions
+    // Service state protection to prevent race conditions
     @Volatile
     private var isServiceStopping = false
     private val serviceLock = Any()
+    
+    // Main thread handler for posting callbacks and timeouts
+    private val mainHandler = Handler(Looper.getMainLooper())
+    
+    // Track pending callbacks to prevent JNI crashes
+    // This ensures the FlutterEngine is not destroyed while callbacks are in flight
+    // Uses unique callback IDs to prevent race conditions between timeout and completion
+    // Note: @Volatile not needed as all access is within synchronized(serviceLock) blocks
+    private var pendingCallbackId: Long = 0  // 0 means no pending callback
+    private var nextCallbackId: Long = 1     // Monotonic counter for callback IDs
+    private var callbackTimeoutRunnable: Runnable? = null
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -171,11 +192,19 @@ class NativeGeofenceForegroundService : Service() {
         val force = intent.getBooleanExtra(Constants.EXTRA_FORCE_SYNC, false)
         Log.d(TAG, "Geofence sync requested (force=$force)")
         
+        // Get the binary messenger from the Flutter engine
+        val messenger = flutterEngine?.dartExecutor?.binaryMessenger
+        if (messenger == null) {
+            Log.e(TAG, "Flutter engine not ready for sync - engine or messenger is null")
+            stopFlutterEngineAndService()
+            return
+        }
+        
         // Use the service's own NativeGeofenceApiImpl with the service's BinaryMessenger
         // This ensures we have a valid main thread context and prevents JNI crashes
         val apiImpl = com.steffaanus.native_geofence.api.NativeGeofenceApiImpl(
             applicationContext,
-            flutterEngine?.dartExecutor?.binaryMessenger
+            messenger
         )
         
         apiImpl.syncGeofences(force)
@@ -219,7 +248,7 @@ class NativeGeofenceForegroundService : Service() {
         flutterLoader.ensureInitializationCompleteAsync(
             applicationContext,
             null,
-            Handler(Looper.getMainLooper())
+            mainHandler
         ) {
             val callbackHandle = getSharedPreferences(
                 Constants.SHARED_PREFERENCES_KEY,
@@ -279,6 +308,7 @@ class NativeGeofenceForegroundService : Service() {
 
     /**
      * Process the current event at the head of the queue
+     * Implements callback synchronization to prevent JNI crashes when engine is destroyed
      */
     private fun processCurrentEvent() {
         val params = eventQueue.peek()
@@ -296,11 +326,109 @@ class NativeGeofenceForegroundService : Service() {
             return
         }
 
-        val nativeGeofenceTriggerApi = NativeGeofenceTriggerApi(engine.dartExecutor.binaryMessenger)
+        // Track pending callbacks with unique ID to prevent race condition
+        // Each callback gets a unique ID so we can correctly match timeout vs completion
+        val currentCallbackId: Long
+        val timeoutRunnable: Runnable
+        synchronized(serviceLock) {
+            if (isServiceStopping) {
+                Log.w(TAG, "Service is stopping, skipping event processing")
+                return
+            }
+            currentCallbackId = nextCallbackId++
+            pendingCallbackId = currentCallbackId
+            Log.d(TAG, "Starting callback with ID: $currentCallbackId")
+
+            // Set up timeout to prevent waiting indefinitely for callbacks
+            // timeoutRunnable is assigned inside synchronized block to ensure visibility
+            // Note: We avoid nested lock acquisition by determining action inside the lock
+            // but executing it outside to prevent potential deadlocks
+            timeoutRunnable = Runnable {
+                // Determine what action to take inside the synchronized block
+                val action: TimeoutAction
+                synchronized(serviceLock) {
+                    // Only process timeout if this is still the current callback
+                    if (pendingCallbackId == currentCallbackId) {
+                        Log.w(TAG, "Callback timeout after ${CALLBACK_TIMEOUT_MS}ms for ID: $currentCallbackId")
+                        pendingCallbackId = 0  // Mark as no pending callback
+                        action = if (isServiceStopping) {
+                            TimeoutAction.DESTROY_ENGINE
+                        } else {
+                            // Timeout occurred but service not stopping yet - fail this event
+                            TimeoutAction.FAIL_EVENT
+                        }
+                    } else {
+                        Log.d(TAG, "Timeout fired but callback ID changed from $currentCallbackId to $pendingCallbackId, ignoring")
+                        action = TimeoutAction.NONE
+                    }
+                }
+                
+                // Execute action outside the synchronized block to avoid nested lock acquisition
+                when (action) {
+                    TimeoutAction.DESTROY_ENGINE -> destroyEngineAndStopService(null)
+                    TimeoutAction.FAIL_EVENT -> {
+                        Log.e(TAG, "Callback timeout, failing event")
+                        onEventProcessingFailed()
+                    }
+                    TimeoutAction.NONE -> { /* No action needed */ }
+                }
+            }
+            callbackTimeoutRunnable = timeoutRunnable
+        }
+        mainHandler.postDelayed(timeoutRunnable, CALLBACK_TIMEOUT_MS)
+
         Log.d(TAG, "Triggering geofence callback in Dart")
 
-        nativeGeofenceTriggerApi.geofenceTriggered(params.toApi()) {
-            onEventProcessed()
+        try {
+            val nativeGeofenceTriggerApi = NativeGeofenceTriggerApi(engine.dartExecutor.binaryMessenger)
+            
+            nativeGeofenceTriggerApi.geofenceTriggered(params.toApi()) {
+                // Check if this callback is still the current one (not timed out or superseded)
+                // Use flags to make control flow clearer and avoid nested lock/action pattern
+                val wasCurrentCallback: Boolean
+                val shouldDestroyEngine: Boolean
+                synchronized(serviceLock) {
+                    // Cancel this callback's specific timeout (use local reference to avoid race condition)
+                    mainHandler.removeCallbacks(timeoutRunnable)
+                    
+                    wasCurrentCallback = (pendingCallbackId == currentCallbackId)
+                    
+                    if (wasCurrentCallback) {
+                        pendingCallbackId = 0  // Mark as no pending callback
+                        Log.d(TAG, "Callback completed with ID: $currentCallbackId")
+                        shouldDestroyEngine = isServiceStopping
+                    } else {
+                        Log.d(TAG, "Callback ID $currentCallbackId completed but current is $pendingCallbackId - skipping duplicate processing")
+                        shouldDestroyEngine = false
+                    }
+                }
+                
+                // Execute actions outside synchronized block to avoid nested lock acquisition
+                if (wasCurrentCallback) {
+                    if (shouldDestroyEngine) {
+                        Log.d(TAG, "All callbacks complete, safe to destroy engine")
+                        destroyEngineAndStopService(null)
+                    } else {
+                        try {
+                            onEventProcessed()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error in onEventProcessed: ${e.message}", e)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to trigger geofence callback: ${e.message}", e)
+            
+            // Clean up timeout and pending callback (use local reference to avoid race condition)
+            mainHandler.removeCallbacks(timeoutRunnable)
+            synchronized(serviceLock) {
+                if (pendingCallbackId == currentCallbackId) {
+                    pendingCallbackId = 0
+                }
+            }
+            
+            onEventProcessingFailed()
         }
     }
 
@@ -341,14 +469,14 @@ class NativeGeofenceForegroundService : Service() {
             Log.w(TAG, "Flutter engine startup failed. Retry attempt $engineStartRetries/$MAX_ENGINE_START_RETRIES in ${retryDelayMs}ms")
             
             // Clean up failed engine before retry
-            Handler(Looper.getMainLooper()).post {
+            mainHandler.post {
                 flutterEngine?.destroy()
                 flutterEngine = null
                 serviceApiImpl = null
             }
             
             // Schedule retry with exponential backoff
-            Handler(Looper.getMainLooper()).postDelayed({
+            mainHandler.postDelayed({
                 Log.d(TAG, "Retrying Flutter engine startup (attempt $engineStartRetries)")
                 startFlutterEngine()
             }, retryDelayMs)
@@ -399,8 +527,10 @@ class NativeGeofenceForegroundService : Service() {
     /**
      * Stop the Flutter engine and the service
      * Protected against duplicate calls and race conditions
+     * Waits for pending callbacks before destroying engine to prevent JNI crashes
      */
     private fun stopFlutterEngineAndService() {
+        val runnableToCancel: Runnable?
         synchronized(serviceLock) {
             if (isServiceStopping) {
                 Log.d(TAG, "Service already stopping, ignoring duplicate stop request")
@@ -408,8 +538,26 @@ class NativeGeofenceForegroundService : Service() {
             }
             isServiceStopping = true
             Log.d(TAG, "Service stopping initiated")
+            
+            // Capture the runnable reference inside the synchronized block for thread safety
+            runnableToCancel = callbackTimeoutRunnable
+            
+            // Don't destroy if a callback is pending - wait for it to complete
+            if (pendingCallbackId != 0L) {
+                Log.d(TAG, "Waiting for callback ID $pendingCallbackId before destroying engine")
+                return
+            }
         }
         
+        destroyEngineAndStopService(runnableToCancel)
+    }
+    
+    /**
+     * Actually destroy the Flutter engine and stop the service
+     * Only called when all pending callbacks have completed or timed out
+     * @param runnableToCancel The timeout runnable to cancel, captured inside synchronized block
+     */
+    private fun destroyEngineAndStopService(runnableToCancel: Runnable?) {
         // Persist remaining queue before stopping (if service is killed, events are recovered)
         if (eventQueue.isNotEmpty()) {
             Log.w(TAG, "Stopping service with ${eventQueue.size} events still in queue - persisting to disk")
@@ -419,11 +567,21 @@ class NativeGeofenceForegroundService : Service() {
             EventQueuePersistence.clearQueue(this)
         }
         
-        Handler(Looper.getMainLooper()).post {
-            flutterEngine?.destroy()
+        // Cancel any pending timeout callbacks
+        // The runnable reference was captured inside synchronized block in stopFlutterEngineAndService()
+        runnableToCancel?.let {
+            mainHandler.removeCallbacks(it)
+        }
+        
+        mainHandler.post {
+            try {
+                flutterEngine?.destroy()
+                Log.d(TAG, "Flutter engine destroyed")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error destroying Flutter engine: ${e.message}", e)
+            }
             flutterEngine = null
             serviceApiImpl = null
-            Log.d(TAG, "Flutter engine destroyed")
         }
         
         stopSelfAndCleanup()
@@ -436,8 +594,12 @@ class NativeGeofenceForegroundService : Service() {
         // Release wake lock
         wakeLock?.let {
             if (it.isHeld) {
-                it.release()
-                Log.d(TAG, "Wake lock released")
+                try {
+                    it.release()
+                    Log.d(TAG, "Wake lock released")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error releasing wake lock: ${e.message}", e)
+                }
             }
         }
         wakeLock = null
@@ -473,20 +635,39 @@ class NativeGeofenceForegroundService : Service() {
                     persistQueue()
                 }
             }
+            
+            // Reset pending callback ID since we're being destroyed anyway
+            pendingCallbackId = 0
+        }
+        
+        // Cancel any pending timeout callbacks
+        callbackTimeoutRunnable?.let {
+            mainHandler.removeCallbacks(it)
         }
         
         // Clean up Flutter engine if still running
-        Handler(Looper.getMainLooper()).post {
-            flutterEngine?.destroy()
+        mainHandler.post {
+            try {
+                flutterEngine?.destroy()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error destroying Flutter engine in onDestroy: ${e.message}", e)
+            }
             flutterEngine = null
+            serviceApiImpl = null
         }
         
         // Release wake lock if still held
         wakeLock?.let {
             if (it.isHeld) {
-                it.release()
+                try {
+                    it.release()
+                    Log.d(TAG, "Wake lock released in onDestroy")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error releasing wake lock: ${e.message}", e)
+                }
             }
         }
+        wakeLock = null
         
         Log.d(TAG, "Service destroyed")
     }
